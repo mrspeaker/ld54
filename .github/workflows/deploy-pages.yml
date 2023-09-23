@@ -2,7 +2,7 @@ name: deploy-pages
 run-name: Deploy to Pages
 on:
   workflow_dispatch:
-  pull_request:
+  push:
 permissions:
   contents: read
   pages: write
