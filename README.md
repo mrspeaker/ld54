@@ -2,6 +2,9 @@
 
 ## build
 
-`cargo install`
-`cargo build`
-`cargo run`
+```rust
+cargo install --path .
+cargo build`
+cargo run
+```
+
