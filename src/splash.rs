@@ -35,7 +35,7 @@ fn splash_setup(
             texture: asset_server.load("img/bg.png"),
             transform: Transform::from_xyz(
                 window.width() / 2.0,
-                window.height() / 2.0 + 50.,
+                window.height() / 2.0,
                 0.0
             ).with_scale(Vec3::new(1.8, 1.62, 0.0)),
             ..default()

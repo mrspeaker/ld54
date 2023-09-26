@@ -14,15 +14,17 @@ pub enum GameState {
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
-        .add_state::<GameState>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                canvas: Some("#game".to_owned()),
-                fit_canvas_to_parent: true,
-                ..Default::default()
+                title: "LD54".into(),
+                canvas: Some("#game".to_owned()),                
+                resolution: (500.0 * 2.0, 300.0 * 2.0).into(),
+                fit_canvas_to_parent: false,
+                ..default()
             }),
-            ..Default::default()
-        }))
+            ..default()
+        }))                
+        .add_state::<GameState>()
         .add_systems(Startup, setup)
         .add_plugins((splash::SplashPlugin, game::GamePlugin))
         .run();
