@@ -52,6 +52,12 @@ fn splash_setup(
             ..default()
         },
         OnSplashScreen));
+
+    // Sound
+    commands.spawn(AudioBundle {
+        source: asset_server.load("sounds/squigge.ogg"),
+        ..default()
+    });
 }
 
 fn countdown(
