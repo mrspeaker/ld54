@@ -3,6 +3,7 @@ mod game;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {
@@ -23,7 +24,8 @@ fn main() {
                 ..default()
             }),
             ..default()
-        }))                
+        }))
+        .add_plugins(OverlayPlugin { font_size: 14.0, ..default() })
         .add_state::<GameState>()
         .add_systems(Startup, setup)
         .add_plugins((splash::SplashPlugin, game::GamePlugin))
@@ -33,6 +35,7 @@ fn main() {
 fn setup(mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>
 ) {
+    screen_print!(sec: 3.0, "Run main setup.");
     let window: &Window = window_query.get_single().unwrap();
     commands.spawn(Camera2dBundle {
         transform:Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
