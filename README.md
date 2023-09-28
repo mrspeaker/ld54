@@ -18,3 +18,7 @@ I added a (debug print plugin)[https://github.com/nicopap/bevy-debug-text-overla
 
 Use it like `println!` except you can optionally pass it a `col:Color` for colours and `sec:u32` for how long to show it.
 
+## Other repo I started messing with bevy
+
+with lots of sprites:
+https://github.com/mrspeaker/beaves
