@@ -2,11 +2,41 @@
 <html>
   <head>
     <meta charset="UTF-8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+
     <link data-trunk rel="scss" href="index.scss" />
     <link data-trunk rel="rust" />
     <link data-trunk rel="copy-dir" href="assets" />
+    <title>LD45. A game by Good Soup.</title>
   </head>
   <body>
-    <canvas id="game" class="bevy-instance__canvas"></canvas>
+    <h1>LD64 game by Good Soup</h1>
+    <div id="container">
+      <canvas id="game" class="bevy-instance__canvas"></canvas>
+      <footer>
+        LD54: A game by Good Soup.
+        <a href="https://ldjam.com/events/ludum-dare/54/$371735">Entry page</a>.
+        <a href="https://github.com/mrspeaker/ld54/">Code repo</a>
+        . Go <span id="fs">fullscreen</span>.
+      </footer>
+    </div>
+    <script>
+      function toggle_fs() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen();
+        } else if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+      document.getElementById("fs").addEventListener("click", toggle_fs);
+    </script>
   </body>
 </html>
