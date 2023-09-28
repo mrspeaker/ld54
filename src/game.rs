@@ -13,7 +13,8 @@ impl Plugin for GamePlugin {
             .add_systems(OnEnter(GameState::InGame), game_setup)
             .add_systems(Update, (
                 move_with_keys,
-                confine_to_window
+                confine_to_window,
+                animate_sprite
             ).run_if(in_state(GameState::InGame)))
             .add_systems(OnExit(GameState::InGame), despawn_screen::<OnGameScreen>);
     }
@@ -28,13 +29,51 @@ struct Playa;
 #[derive(Resource, Deref, DerefMut)]
 struct GameTimer(Timer);
 
+#[derive(Component)]
+struct AnimationIndices {
+    first: usize,
+    last: usize,
+}
+
+#[derive(Component, Deref, DerefMut)]
+struct AnimationTimer(Timer);
+
+fn animate_sprite(
+    time: Res<Time>,
+    mut query: Query<(
+        &AnimationIndices,
+        &mut AnimationTimer,
+        &mut TextureAtlasSprite,
+    )>,
+) {
+    for (indices, mut timer, mut sprite) in &mut query {
+        timer.tick(time.delta());
+        if timer.just_finished() {
+            sprite.index = if sprite.index == indices.last {
+                indices.first
+            } else {
+                sprite.index + 1
+            };
+        }
+    }
+}
+
 fn game_setup(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,    
-    asset_server: Res<AssetServer>       
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>
 ) {
     let window: &Window = window_query.get_single().unwrap();
-    
+
+    let texture_handle = asset_server.load("img/gabe-idle-run.png");
+    let texture_atlas =
+        TextureAtlas::from_grid(texture_handle, Vec2::new(24.0, 24.0), 7, 1, None, None);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+    // Use only the subset of sprites in the sheet that make up the run animation
+    let animation_indices = AnimationIndices { first: 1, last: 6 };
+
+
     // Make the player
     commands.spawn((
         SpriteBundle {
@@ -54,6 +93,20 @@ fn game_setup(
         OnGameScreen));
 
     commands.spawn((
+        SpriteSheetBundle {
+            texture_atlas: texture_atlas_handle,
+            sprite: TextureAtlasSprite::new(animation_indices.first),
+            transform: Transform::from_xyz(
+                window.width() / 2.0,
+                100.0,
+                1.0).with_scale(Vec3::splat(6.0)),
+            ..default()
+        },
+        animation_indices,
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+    ));
+
+    commands.spawn((
         SpriteBundle {
             texture: asset_server.load("img/bg.png"),
             transform: Transform::from_xyz(
@@ -65,6 +118,7 @@ fn game_setup(
         },
         OnGameScreen
     ));
+
 }
 
 fn move_with_keys(
