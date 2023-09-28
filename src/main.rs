@@ -1,5 +1,6 @@
 mod splash;
 mod game;
+mod logo;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -8,13 +9,14 @@ use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {
     #[default]
+    Logo,
     Splash,
     InGame,
 }
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "LD54".into(),
@@ -28,7 +30,7 @@ fn main() {
         .add_plugins(OverlayPlugin { font_size: 14.0, ..default() })
         .add_state::<GameState>()
         .add_systems(Startup, setup)
-        .add_plugins((splash::SplashPlugin, game::GamePlugin))
+        .add_plugins((logo::LogoPlugin, splash::SplashPlugin, game::GamePlugin))
         .run();
 }
 
