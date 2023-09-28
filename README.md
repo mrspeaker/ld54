@@ -1,5 +1,7 @@
 # LD54
 
+![soupchunk](https://github.com/mrspeaker/ld54/assets/129330/d2e12d52-34d0-42ad-9d8d-56f0dd034ced)
+
 ## See last deployed version:
 
 [LD54](https://mrspeaker.github.io/ld54/)
