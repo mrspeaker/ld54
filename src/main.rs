@@ -1,3 +1,7 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::module_name_repetitions)]
+
 mod game;
 mod logo;
 mod splash;

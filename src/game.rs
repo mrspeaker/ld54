@@ -147,16 +147,16 @@ fn confine_to_window(
     let y2 = window.height() - hh;
     let mut t: Vec3 = transform.translation;
     if t.x < x1 {
-        t.x = x1
+        t.x = x1;
     }
     if t.x > x2 {
-        t.x = x2
+        t.x = x2;
     }
     if t.y < y1 {
-        t.y = y1
+        t.y = y1;
     }
     if t.y > y2 {
-        t.y = y2
+        t.y = y2;
     }
     transform.translation = t;
 }
