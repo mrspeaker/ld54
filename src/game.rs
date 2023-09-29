@@ -1,21 +1,17 @@
-use bevy::{
-    prelude::*,
-    window::PrimaryWindow
-};
-use crate::{ despawn_screen, GameState };
+use crate::{despawn_screen, GameState};
+use bevy::{prelude::*, window::PrimaryWindow};
 
-pub const PLAYA_SPEED:f32 = 250.0;
+pub const PLAYA_SPEED: f32 = 250.0;
 
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnEnter(GameState::InGame), game_setup)
-            .add_systems(Update, (
-                move_with_keys,
-                confine_to_window,
-                animate_sprite
-            ).run_if(in_state(GameState::InGame)))
+        app.add_systems(OnEnter(GameState::InGame), game_setup)
+            .add_systems(
+                Update,
+                (move_with_keys, confine_to_window, animate_sprite)
+                    .run_if(in_state(GameState::InGame)),
+            )
             .add_systems(OnExit(GameState::InGame), despawn_screen::<OnGameScreen>);
     }
 }
@@ -60,9 +56,9 @@ fn animate_sprite(
 
 fn game_setup(
     mut commands: Commands,
-    window_query: Query<&Window, With<PrimaryWindow>>,    
+    window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     let window: &Window = window_query.get_single().unwrap();
 
@@ -73,16 +69,11 @@ fn game_setup(
     // Use only the subset of sprites in the sheet that make up the run animation
     let animation_indices = AnimationIndices { first: 1, last: 6 };
 
-
     // Make the player
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("img/char.png"),
-            transform: Transform::from_xyz(
-                window.width() / 2.0,
-                window.height() / 2.0 + 50.,
-                1.0
-            ),
+            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0 + 50., 1.0),
             sprite: Sprite {
                 custom_size: Some(Vec2::new(50.0, 50.0)),
                 ..default()
@@ -90,16 +81,15 @@ fn game_setup(
             ..default()
         },
         Playa,
-        OnGameScreen));
+        OnGameScreen,
+    ));
 
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: texture_atlas_handle,
             sprite: TextureAtlasSprite::new(animation_indices.first),
-            transform: Transform::from_xyz(
-                window.width() / 2.0,
-                100.0,
-                1.0).with_scale(Vec3::splat(6.0)),
+            transform: Transform::from_xyz(window.width() / 2.0, 100.0, 1.0)
+                .with_scale(Vec3::splat(6.0)),
             ..default()
         },
         animation_indices,
@@ -109,22 +99,18 @@ fn game_setup(
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("img/bg.png"),
-            transform: Transform::from_xyz(
-                window.width() / 2.0,
-                window.height() / 2.0,
-                0.0
-            ).with_scale(Vec3::new(1.8, 1.62, 0.0)),
+            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
+                .with_scale(Vec3::new(1.8, 1.62, 0.0)),
             ..default()
         },
-        OnGameScreen
+        OnGameScreen,
     ));
-
 }
 
 fn move_with_keys(
     key_in: Res<Input<KeyCode>>,
     time: Res<Time>,
-    mut query: Query<&mut Transform, With<Playa>>
+    mut query: Query<&mut Transform, With<Playa>>,
 ) {
     let mut dir = Vec3::ZERO;
     let mut transform = query.single_mut();
@@ -150,8 +136,8 @@ fn move_with_keys(
 fn confine_to_window(
     mut playa_query: Query<(&Sprite, &mut Transform), With<Playa>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
-){
-    let (sprite, mut transform) = playa_query.single_mut() ;
+) {
+    let (sprite, mut transform) = playa_query.single_mut();
     let window: &Window = window_query.get_single().unwrap();
     let hw = sprite.custom_size.unwrap_or(Vec2::ONE).x / 2.0;
     let hh = sprite.custom_size.unwrap_or(Vec2::ONE).y / 2.0;
@@ -160,9 +146,17 @@ fn confine_to_window(
     let y1 = hh;
     let y2 = window.height() - hh;
     let mut t: Vec3 = transform.translation;
-    if t.x < x1 { t.x = x1 }
-    if t.x > x2 { t.x = x2 }
-    if t.y < y1 { t.y = y1 }
-    if t.y > y2 { t.y = y2 }
+    if t.x < x1 {
+        t.x = x1
+    }
+    if t.x > x2 {
+        t.x = x2
+    }
+    if t.y < y1 {
+        t.y = y1
+    }
+    if t.y > y2 {
+        t.y = y2
+    }
     transform.translation = t;
 }

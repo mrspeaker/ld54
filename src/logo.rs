@@ -7,8 +7,7 @@ pub struct LogoPlugin;
 
 impl Plugin for LogoPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnEnter(GameState::Logo), setup)
+        app.add_systems(OnEnter(GameState::Logo), setup)
             .add_systems(Update, (countdown).run_if(in_state(GameState::Logo)))
             .add_systems(OnExit(GameState::Logo), despawn_screen::<OnLogoScreen>);
     }
@@ -23,8 +22,8 @@ struct ScreenTimer(Timer);
 fn setup(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    asset_server: Res<AssetServer>
-){
+    asset_server: Res<AssetServer>,
+) {
     let window: &Window = window_query.get_single().unwrap();
 
     commands.insert_resource(ScreenTimer(Timer::from_seconds(2.0, TimerMode::Once)));
@@ -36,7 +35,8 @@ fn setup(
                 .with_scale(Vec3::splat(0.5)),
             ..default()
         },
-        OnLogoScreen));
+        OnLogoScreen,
+    ));
 
     commands.spawn((
         // Create a TextBundle that has a Text with a single section.

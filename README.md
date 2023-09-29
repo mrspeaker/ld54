@@ -27,7 +27,19 @@ rustup target add wasm32-unknown-unknown
 ```
 and get [`trunk`](https://trunkrs.dev/).
 
+### Git Hook
+Add the following git hook to `.git/hooks/pre-commit`:
+```sh
+#!/bin/sh
+set -e
+cargo fmt --check
+cargo check
+cargo clippy -- -D warnings -A clippy::pedantic
+```
+
 ## Build
+
+Run `./check` to lint and format code.
 
 Choose one:
 ```sh
