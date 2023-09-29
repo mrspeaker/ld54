@@ -27,6 +27,8 @@ rustup target add wasm32-unknown-unknown
 ```
 and get [`trunk`](https://trunkrs.dev/).
 
+Finally, I recommend [configuring rust-analyzer to show clippy lints](https://averylarsen.com/posts/enable-clippy-with-rust-analyzer/).
+
 ### Git Hook
 Add the following git hook to `.git/hooks/pre-commit`:
 ```sh
