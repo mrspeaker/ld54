@@ -6,12 +6,42 @@
 
 [LD54](https://mrspeaker.github.io/ld54/)
 
-## build & run
+## Setup
+Install [`rustup`](https://rustup.rs/).
 
-```rust
-cargo install --path .
-cargo build`
+Get the `nightly` toolchain and some of the tools.
+```sh
+# Nightly toolchain for unstable Rust features
+rustup toolchain install nightly
+
+# Linter
+rustup component add clippy
+
+# LSP with nightly compiler support
+rustup component add rust-analyzer --toolchain nightly
+```
+
+For web builds:
+```sh
+rustup target add wasm32-unknown-unknown
+```
+and get [`trunk`](https://trunkrs.dev/).
+
+## Build
+
+Choose one:
+```sh
+# Play the Native Debug Build
 cargo run
+
+# Play the Web Debug Build
+trunk serve
+
+# Build for Native Release
+cargo build --release
+
+# Build for Web Release
+trunk build --release
 ```
 
 ## debug println!
