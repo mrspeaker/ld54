@@ -7,7 +7,9 @@ pub const PLAYA_SPEED: f32 = 250.0;
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::InGame), game_setup)
+        app
+            .add_plugins(TilemapPlugin)
+            .add_systems(OnEnter(GameState::InGame), game_setup)
             .add_systems(
                 Update,
                 (
@@ -122,7 +124,6 @@ fn game_setup(
         storage: tile_storage,
         texture: TilemapTexture::Single(texture_handle2.clone()),
         tile_size,
-        spacing: TilemapSpacing { x: 8.0, y: 8.0 },
         transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0),
         ..Default::default()
     });
