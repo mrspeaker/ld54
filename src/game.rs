@@ -1,5 +1,5 @@
 use crate::{despawn_screen, GameState};
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{prelude::*, window::PrimaryWindow, input::mouse::MouseButtonInput};
 use bevy_debug_text_overlay::screen_print;
 
 pub const PLAYA_SPEED: f32 = 250.0;
@@ -12,6 +12,7 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     move_with_keys,
+                    mouse_button_events,
                     cursor_position,
                     confine_to_window,
                     animate_sprite)
@@ -171,5 +172,23 @@ fn cursor_position(
 ) {
     if let Some(position) = q_windows.single().cursor_position() {
         screen_print!("Cursor pos {:?}", position);
+    }
+}
+
+
+fn mouse_button_events(
+    mut mousebtn_evr: EventReader<MouseButtonInput>,
+) {
+    use bevy::input::ButtonState;
+
+    for ev in mousebtn_evr.iter() {
+        match ev.state {
+            ButtonState::Pressed => {
+                screen_print!("Mouse button press: {:?}", ev.button);
+            }
+            ButtonState::Released => {
+                screen_print!("Mouse button release: {:?}", ev.button);
+            }
+        }
     }
 }
