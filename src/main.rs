@@ -28,9 +28,9 @@ pub static FONT: OnceLock<HandleId> = OnceLock::new();
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {
-    #[default]
     Logo,
     Splash,
+    #[default]
     InGame,
 }
 
@@ -58,8 +58,8 @@ fn main() {
 }
 
 fn setup(mut commands: Commands,     
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+//    mut meshes: ResMut<Assets<Mesh>>,
+//    mut materials: ResMut<Assets<ColorMaterial>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     assets: Res<AssetServer>) {
     screen_print!(sec: 3.0, "Run main setup.");
@@ -80,7 +80,7 @@ fn setup(mut commands: Commands,
             _ => panic!("Bad char in tilemap"),
         }
     }
-
+/*
     const TILE_SIZE: f32 = 20.0;
     
     //            1         2         3         4         5         6         7         
@@ -119,17 +119,17 @@ fn setup(mut commands: Commands,
             let tilemap_index = (((tile_y_count - 1) - y) * tile_x_count) + x;
             let color = color_from_char(tilemap[tilemap_index]);
 
-            commands.spawn(MaterialMesh2dBundle {
+            /*commands.spawn(MaterialMesh2dBundle {
                 mesh: meshes
                     .add(shape::Quad::new(Vec2::new(TILE_SIZE, TILE_SIZE)).into())
                     .into(),
                 material: materials.add(ColorMaterial::from(color)),
                 transform: Transform::from_translation(pos),
                 ..default()
-            });
+            });*/
         }
     }
-        
+  */
 }
 
 fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
