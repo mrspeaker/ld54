@@ -1,5 +1,6 @@
 use crate::{despawn_screen, GameState};
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
+use bevy_debug_text_overlay::screen_print;
 
 pub const PLAYA_SPEED: f32 = 250.0;
 
@@ -9,7 +10,13 @@ impl Plugin for GamePlugin {
         app.add_systems(OnEnter(GameState::InGame), game_setup)
             .add_systems(
                 Update,
-                (move_with_keys, confine_to_window, animate_sprite)
+                (
+                    move_with_keys,
+                    mouse_button_events,
+                    cursor_position,
+                    confine_to_window,
+                    animate_sprite,
+                )
                     .run_if(in_state(GameState::InGame)),
             )
             .add_systems(OnExit(GameState::InGame), despawn_screen::<OnGameScreen>);
@@ -159,4 +166,25 @@ fn confine_to_window(
         t.y = y2;
     }
     transform.translation = t;
+}
+
+fn cursor_position(q_windows: Query<&Window, With<PrimaryWindow>>) {
+    if let Some(position) = q_windows.single().cursor_position() {
+        screen_print!("Cursor pos {:?}", position);
+    }
+}
+
+fn mouse_button_events(mut mousebtn_evr: EventReader<MouseButtonInput>) {
+    use bevy::input::ButtonState;
+
+    for ev in &mut mousebtn_evr {
+        match ev.state {
+            ButtonState::Pressed => {
+                screen_print!("Mouse button press: {:?}", ev.button);
+            }
+            ButtonState::Released => {
+                screen_print!("Mouse button release: {:?}", ev.button);
+            }
+        }
+    }
 }
