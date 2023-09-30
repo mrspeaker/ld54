@@ -40,6 +40,11 @@ struct AnimationIndices {
 #[derive(Component, Deref, DerefMut)]
 struct AnimationTimer(Timer);
 
+#[derive(Resource)]
+struct GameData {
+    tiles: usize,
+}
+
 fn animate_sprite(
     time: Res<Time>,
     mut query: Query<(
@@ -111,6 +116,8 @@ fn game_setup(
         },
         OnGameScreen,
     ));
+
+    commands.insert_resource(GameData { tiles: 1 });
 }
 
 fn move_with_keys(
