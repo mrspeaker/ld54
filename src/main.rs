@@ -1,15 +1,30 @@
 #![warn(clippy::pedantic)]
-#![allow(clippy::needless_pass_by_value)]
+#![allow(dead_code)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::needless_pass_by_value)]
 
-mod game;
-mod logo;
-mod splash;
+pub mod game;
+pub mod logo;
+pub mod organism;
+pub mod splash;
 
-use bevy::prelude::*;
+use std::sync::OnceLock;
+
 use bevy::window::PrimaryWindow;
+use bevy::{asset::HandleId, prelude::*};
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy::sprite::MaterialMesh2dBundle;
+
+pub mod prelude {
+    pub use bevy::prelude::*;
+    pub use bevy_debug_text_overlay::screen_print;
+    pub use macros::gene;
+
+    pub use crate::{organism, FONT};
+}
+
+pub static FONT: OnceLock<HandleId> = OnceLock::new();
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {
@@ -45,9 +60,12 @@ fn main() {
 fn setup(mut commands: Commands,     
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    window_query: Query<&Window, With<PrimaryWindow>>) {
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    assets: Res<AssetServer>) {
     screen_print!(sec: 3.0, "Run main setup.");
     let window: &Window = window_query.get_single().unwrap();
+    FONT.set(assets.load::<Font, _>("font/FredokaOne-Regular.ttf").id())
+        .unwrap();
 
     commands.spawn(Camera2dBundle {
         transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
