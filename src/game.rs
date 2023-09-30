@@ -1,6 +1,5 @@
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
-use bevy_ecs_tilemap::prelude::*;
 
 pub const PLAYA_SPEED: f32 = 250.0;
 
@@ -8,7 +7,6 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(TilemapPlugin)
             .add_systems(OnEnter(GameState::InGame), game_setup)
             .add_systems(
                 Update,
@@ -82,51 +80,6 @@ fn game_setup(
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
     // Use only the subset of sprites in the sheet that make up the run animation
     let animation_indices = AnimationIndices { first: 1, last: 6 };
-
-    let texture_handle2: Handle<Image> = asset_server.load("img/tiles.png");
-
-    commands.spawn((
-        SpriteBundle {
-            texture: texture_handle2.clone(),
-            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
-                .with_scale(Vec3::new(1.8, 1.62, 0.0)),
-            ..default()
-        },
-        OnGameScreen,
-    ));
-
-    let map_size = TilemapSize { x: 32, y: 32 };
-    let tilemap_entity = commands.spawn_empty().id();
-    let mut tile_storage = TileStorage::empty(map_size);
-
-    for x in 0..map_size.x {
-        for y in 0..map_size.y {
-            let tile_pos = TilePos { x, y };
-            let tile_entity = commands
-                .spawn(TileBundle {
-                    position: tile_pos,
-                    tilemap_id: TilemapId(tilemap_entity),
-                    ..Default::default()
-                })
-                .id();
-            tile_storage.set(&tile_pos, tile_entity);
-        }
-    }
-
-    let tile_size = TilemapTileSize { x: 16.0, y: 16.0 };
-    let grid_size = tile_size.into();
-    let map_type = TilemapType::default();
-
-    commands.entity(tilemap_entity).insert(TilemapBundle {
-        grid_size,
-        map_type,
-        size: map_size,
-        storage: tile_storage,
-        texture: TilemapTexture::Single(texture_handle2.clone()),
-        tile_size,
-        transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0),
-        ..Default::default()
-    });
 
     // Make the player
     commands.spawn((
