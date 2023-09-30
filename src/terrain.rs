@@ -13,9 +13,9 @@ impl Plugin for TerrainPlugin {
             .add_plugins(TilemapPlugin)
             .init_resource::<CursorPos>()
             .add_systems(OnEnter(GameState::InGame), terrain_setup)
-            //.add_systems(Update, update_map.run_if(in_state(GameState::InGame)))
+            //.add_systems(Update, update_map)
             .add_systems(First, (update_cursor_pos).chain())
-            .add_systems(Update, highlight_tile);
+            .add_systems(Update, (highlight_tile).run_if(in_state(GameState::InGame)));// Is this running even in non-game state?
     }
 }
 
@@ -24,6 +24,9 @@ struct TileOffset(u16);
 
 #[derive(Component)]
 struct LastUpdate(f64);
+
+#[derive(Component)]
+struct LastTile(TilePos);
 
 fn terrain_setup(
     mut commands: Commands,
@@ -67,7 +70,8 @@ fn terrain_setup(
             ..Default::default()
         },
         LastUpdate(0.0),
-        TileOffset(1)
+        TileOffset(1),
+        LastTile(TilePos::new(0,0))
     ));
 
 }
@@ -143,22 +147,22 @@ pub fn update_cursor_pos(
     }
 }
 
-
 fn highlight_tile(
     mut commands: Commands,
     cursor_pos: Res<CursorPos>,
-    tilemap_q: Query<(
+    mut tilemap_q: Query<(
         &TilemapSize,
         &TilemapGridSize,
         &TilemapType,
         &TileStorage,
         &Transform,
+        &mut LastTile
     )>,
     mut tile_q: Query<&mut TileTextureIndex>,
 ) {
     for (map_size, grid_size,
          map_type, tile_storage,
-         map_transform) in tilemap_q.iter() {
+         map_transform, mut last_tile) in tilemap_q.iter_mut() {
         let cursor_pos: Vec2 = cursor_pos.0;
         let cursor_in_map_pos: Vec2 = {
             // Extend the cursor_pos vec3 by 0.0 and 1.0
@@ -171,11 +175,12 @@ fn highlight_tile(
             TilePos::from_world_pos(&cursor_in_map_pos, map_size, grid_size, map_type)
         {
             if let Some(tile_entity) = tile_storage.get(&tile_pos) {
-                screen_print!("Tile: {:?}", tile_entity);
-
-                //let r = tilemap_q.get_mut(tile_entity);
-                if let Ok(mut t) = tile_q.get_mut(tile_entity) {
-                    t.0 = if t.0 == 5 { 1 } else { 5 };
+                if tile_pos.x != last_tile.0.x || tile_pos.y != last_tile.0.y {
+                    screen_print!("Tile: {:?}", tile_entity);
+                    last_tile.0 = tile_pos;
+                    if let Ok(mut t) = tile_q.get_mut(tile_entity) {
+                        t.0 = if t.0 == 5 { 1 } else { 5 };
+                    }
                 }
             }
         }
