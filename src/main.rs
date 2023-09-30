@@ -9,6 +9,7 @@ mod splash;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
+use bevy::sprite::MaterialMesh2dBundle;
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {
@@ -41,7 +42,10 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, window_query: Query<&Window, With<PrimaryWindow>>) {
+fn setup(mut commands: Commands,     
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    window_query: Query<&Window, With<PrimaryWindow>>) {
     screen_print!(sec: 3.0, "Run main setup.");
     let window: &Window = window_query.get_single().unwrap();
 
@@ -49,6 +53,65 @@ fn setup(mut commands: Commands, window_query: Query<&Window, With<PrimaryWindow
         transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
         ..default()
     });
+    
+    pub fn color_from_char(byte: u8) -> Color {
+        let c = byte as char;
+        match c {
+            '#' => Color::GRAY,
+            '.' => Color::BLUE,
+            _ => panic!("Bad char in tilemap"),
+        }
+    }
+
+    const TILE_SIZE: f32 = 20.0;
+    
+    //            1         2         3         4         5         6         7         
+    //  01234567890123456789012345678901234567890123456789012345678901234567890123456789
+    let tilemap = b"\
+        ................................................................................\
+        ................................................................................\
+        ................................................................................\
+        ................................................................................\
+        ................................................................................\
+        ########........................................................................\
+        ##############..................................................................\
+        .........#####..................................................................\
+        ................................................................................\
+        ................................................................................\
+        .....................................................................###########\
+        ......................................................................##########\
+        ..........................................................#.....................\
+        ..........................................................##....................\
+        ################..........................................###....###############\
+        ##################....................................##########################\
+        #####################....###....######.............###.#########################\
+        ################################################################################\
+        ################################################################################\
+        ################################################################################";
+
+    let tile_x_count = 80;
+    let tile_y_count = tilemap.len() / tile_x_count;
+
+    for y in 0..tile_y_count {
+        for x in 0..tile_x_count {
+            
+            let tile_centre_offset = Vec3::new(TILE_SIZE, TILE_SIZE, 0.0) / 2.0;
+            let pos = Vec3::new(x as f32, y as f32, 0.0) * TILE_SIZE + tile_centre_offset;
+            
+            let tilemap_index = (((tile_y_count - 1) - y) * tile_x_count) + x;
+            let color = color_from_char(tilemap[tilemap_index]);
+
+            commands.spawn(MaterialMesh2dBundle {
+                mesh: meshes
+                    .add(shape::Quad::new(Vec2::new(TILE_SIZE, TILE_SIZE)).into())
+                    .into(),
+                material: materials.add(ColorMaterial::from(color)),
+                transform: Transform::from_translation(pos),
+                ..default()
+            });
+        }
+    }
+        
 }
 
 fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
@@ -56,3 +119,4 @@ fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands
         commands.entity(entity).despawn_recursive();
     }
 }
+
