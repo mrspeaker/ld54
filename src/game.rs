@@ -1,6 +1,5 @@
-use crate::{despawn_screen, GameState};
+use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
-use bevy_debug_text_overlay::screen_print;
 
 pub const PLAYA_SPEED: f32 = 250.0;
 
@@ -168,21 +167,31 @@ fn confine_to_window(
     transform.translation = t;
 }
 
-fn cursor_position(q_windows: Query<&Window, With<PrimaryWindow>>) {
-    if let Some(position) = q_windows.single().cursor_position() {
+fn cursor_position(windows: Query<&Window, With<PrimaryWindow>>) {
+    if let Some(position) = windows.single().cursor_position() {
         screen_print!("Cursor pos {:?}", position);
     }
 }
 
-fn mouse_button_events(mut mousebtn_evr: EventReader<MouseButtonInput>) {
+fn mouse_button_events(
+    mut commands: Commands,
+    mut events: EventReader<MouseButtonInput>,
+    assets: Res<AssetServer>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+) {
     use bevy::input::ButtonState;
 
-    for ev in &mut mousebtn_evr {
+    let pos = windows.single().cursor_position();
+
+    for ev in &mut events {
         match ev.state {
             ButtonState::Pressed => {
                 screen_print!("Mouse button press: {:?}", ev.button);
             }
             ButtonState::Released => {
+                if let Some(position) = pos {
+                    organism::create_random_organsim(&mut commands, &assets, position);
+                }
                 screen_print!("Mouse button release: {:?}", ev.button);
             }
         }
