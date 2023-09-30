@@ -1,14 +1,21 @@
 #![warn(clippy::pedantic)]
+#![allow(dead_code)]
 #![allow(clippy::needless_pass_by_value)]
 #![allow(clippy::module_name_repetitions)]
 
 mod game;
 mod logo;
+mod organism;
 mod splash;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
+
+pub mod prelude {
+    pub use bevy::prelude::*;
+    pub use macros::gene;
+}
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {

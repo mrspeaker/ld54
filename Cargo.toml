@@ -30,3 +30,5 @@ incremental = false
 bevy = { version = "0.11.2" }
 rand = "0.8.5"
 bevy-debug-text-overlay = "6"
+
+macros = { path = "macros" }
