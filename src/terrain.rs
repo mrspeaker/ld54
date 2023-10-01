@@ -1,11 +1,9 @@
 use bevy::input::{mouse::MouseButtonInput, ButtonState};
 use bevy::math::Vec4Swizzles;
 use bevy::prelude::*;
-use bevy_debug_text_overlay::screen_print;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
-use std::time::Duration;
 
 use crate::GameState;
 
@@ -139,7 +137,7 @@ pub fn update_pointer(
     mut pointer: ResMut<Pointer>,
     mut events: EventReader<MouseButtonInput>,
 ) {
-    for cursor_moved in cursor_moved_events.iter() {
+    for cursor_moved in &mut cursor_moved_events {
         for (cam_t, cam) in camera_q.iter() {
             if let Some(pos) = cam.viewport_to_world_2d(cam_t, cursor_moved.position) {
                 pointer.pos = pos;
@@ -184,7 +182,7 @@ fn highlight_tile(
     audio: Res<Audio>,
 ) {
     for (map_size, grid_size, map_type, tile_storage, map_transform, mut last_tile) in
-        tilemap_q.iter_mut()
+        &mut tilemap_q
     {
         let cursor_in_map_pos: Vec2 = {
             // Extend the cursor_pos vec3 by 0.0 and 1.0
@@ -233,7 +231,7 @@ fn update_map(
     mut tile_query: Query<&mut TileTextureIndex>,
 ) {
     let current_time = time.elapsed_seconds_f64();
-    for (mut offset_idx, mut last_update, tile_storage, map_size) in tilemap_query.iter_mut() {
+    for (mut offset_idx, mut last_update, tile_storage, map_size) in &mut tilemap_query {
         if current_time - last_update.0 > 0.1 {
             offset_idx.0 += 1;
             if offset_idx.0 > 5 {
@@ -256,7 +254,7 @@ fn update_map(
                     for neighbor_entity in neighboring_entities.iter() {
                         // Query the tile entities to change the colors
                         if let Ok(mut tile_texture) = tile_query.get_mut(*neighbor_entity) {
-                            tile_texture.0 = idx as u32;
+                            tile_texture.0 = u32::from(idx);
                         }
                     }
                 }
@@ -277,7 +275,7 @@ fn spawn_plant(
     query: Query<(Entity, &TilePos), With<Topsoil>>,
     mut tile_query: Query<&mut TileTextureIndex>,
 ) {
-    for (tile_storage, _map_size) in tilemap_query.iter_mut() {
+    for (tile_storage, _map_size) in &mut tilemap_query {
         if key_in.pressed(KeyCode::Space) {
             for (ent, pos) in query.iter() {
                 if pos.x % 4 == 0 {

@@ -63,7 +63,7 @@ fn assign_waypoints(
     let window: &Window = window_query.get_single().unwrap();
 
     let mut rng = rand::thread_rng();
-    for (mut follow_path, transform) in query.iter_mut() {
+    for (mut follow_path, _transform) in &mut query {
         if follow_path.done {
             let x: f32 = rng.gen_range(0.0..=1.0) * window.width();
             let y: f32 = rng.gen_range(0.0..=1.0) * window.height();
@@ -76,7 +76,7 @@ fn assign_waypoints(
 
 fn walk_path(time: Res<Time>, mut query: Query<(&mut FollowPath, &mut Transform)>) {
     let dt = time.delta_seconds();
-    for (mut follow_path, mut transform) in query.iter_mut() {
+    for (mut follow_path, mut transform) in &mut query {
         if !follow_path.done {
             let p = transform.translation.xy();
             let end = follow_path.end;
@@ -246,7 +246,7 @@ fn confine_to_window(
 }
 
 fn cursor_position(windows: Query<&Window, With<PrimaryWindow>>) {
-    if let Some(position) = windows.single().cursor_position() {
+    if let Some(_position) = windows.single().cursor_position() {
         // screen_print!("Cursor pos {:?}", position);
     }
 }
