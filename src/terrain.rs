@@ -87,7 +87,7 @@ fn terrain_setup(
             storage: tile_storage,
             texture: TilemapTexture::Single(texture.clone()),
             tile_size,
-            transform: Transform::from_xyz(tile_size.x / 2.0, 0.0,0.0),
+            transform: Transform::from_xyz(tile_size.x / 2.0, 0.0,0.5),
             ..Default::default()
         },
         LastUpdate(0.0),
@@ -163,7 +163,7 @@ fn highlight_tile(
 
                 if let Ok(mut t) = tile_q.get_mut(tile_entity) {
                     if pointer.pressed {
-                        pointer.tile = if t.0 == 0 || t.0 == 1 { 6 } else { 1 };
+                        pointer.tile = if t.0 == 0 { 7 } else { 0 };
                         pointer.pressed = false;
                     }
 

@@ -81,10 +81,21 @@ fn game_setup(
     // Use only the subset of sprites in the sheet that make up the run animation
     let animation_indices = AnimationIndices { first: 1, last: 6 };
 
+    // Background image
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("img/bg.png"),
+            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
+                .with_scale(Vec3::new(1.7, 1.4, 0.0)),
+            ..default()
+        },
+        OnGameScreen,
+    ));
+
     // Make the player
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("img/char.png"),
+            texture: asset_server.load("img/beep.png"),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0 + 50., 1.0),
             sprite: Sprite {
                 custom_size: Some(Vec2::new(50.0, 50.0)),
@@ -100,7 +111,7 @@ fn game_setup(
         SpriteSheetBundle {
             texture_atlas: texture_atlas_handle,
             sprite: TextureAtlasSprite::new(animation_indices.first),
-            transform: Transform::from_xyz(window.width() / 2.0, 100.0, 1.0)
+            transform: Transform::from_xyz(window.width() / 2.0, 100.0, 0.1)
                 .with_scale(Vec3::splat(6.0)),
             ..default()
         },
@@ -177,7 +188,7 @@ fn confine_to_window(
 
 fn cursor_position(windows: Query<&Window, With<PrimaryWindow>>) {
     if let Some(position) = windows.single().cursor_position() {
-        screen_print!("Cursor pos {:?}", position);
+        // screen_print!("Cursor pos {:?}", position);
     }
 }
 
