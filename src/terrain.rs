@@ -15,24 +15,15 @@ pub const TILE_SIZE: f32 = 40.0;
 pub const GAP_LEFT: f32 = TILE_SIZE * 2.0;
 pub const GAP_BOTTOM: f32 = TILE_SIZE * 0.0;
 
-#[repr(u32)]
-enum Tile {
-    Air = 0,
-    Dirt = 18,
-    Rock = 16,
-    Leaves = 7,
-    Stalk = 8
-}
-impl From<u32> for Tile {
-    fn from(num: u32) -> Self {
-        match num {
-            0 => Tile::Air,
-            7 => Tile::Leaves,
-            8 => Tile::Stalk,
-            16 => Tile::Rock,
-            _ => Tile::Air
-        }
-    }
+const MAX_PLANT_HEIGHT: u8 = 3;
+
+pub struct Tiles;
+impl Tiles {
+    pub const AIR: u32 = 0;
+    pub const DIRT: u32 = 18;
+    pub const ROCK: u32 = 27;
+    pub const LEAVES: u32 = 7;
+    pub const STALK: u32 = 8;
 }
 
 pub struct TerrainPlugin;
@@ -46,11 +37,9 @@ impl Plugin for TerrainPlugin {
                 Update,
                 (highlight_tile.after(update_pointer), spawn_plant)
                     .run_if(in_state(GameState::InGame)),
-            ); // Is this running even in non-game state?
+            );
     }
 }
-
-const MAX_PLANT_HEIGHT: u8 = 3;
 
 enum PlantType {
     Green,
@@ -200,9 +189,9 @@ fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
     let ch = tilemap[((syu - yu) - 1) * sxu + xu];
 
     let idx = match ch {
-        b'#' => Tile::Dirt,
-        b'X' => Tile::Rock,
-        _ => Tile::Air,
+        b'#' => Tiles::DIRT,
+        b'X' => Tiles::ROCK,
+        _ => Tiles::AIR,
     };
     TileTextureIndex(idx as u32)
  }
@@ -283,19 +272,19 @@ fn highlight_tile(
 
                 if let Ok(mut t) = tile_q.get_mut(tile_entity) {
                     if pointer.pressed {
-                        pointer.tile = match Tile::from(t.0) {
-                            Tile::Air => Tile::Dirt,
-                            Tile::Rock => Tile::Rock,
-                            _ => Tile::Air
+                        pointer.tile = match t.0 {
+                            Tiles::AIR => Tiles::DIRT,
+                            Tiles::ROCK => Tiles::ROCK,
+                            _ => Tiles::AIR
                         } as u32;
                         pointer.pressed = false;
-                        pointer.is_down = pointer.tile != Tile::Rock as u32;
+                        pointer.is_down = pointer.tile != Tiles::ROCK;
                     }
 
                     if pointer.is_down && t.0 != pointer.tile {
                         t.0 = pointer.tile;
                         audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
-                        if pointer.tile == Tile::Leaves as u32 {
+                        if pointer.tile == Tiles::LEAVES {
                             commands.entity(tile_entity).insert((Colliding, Topsoil));
                         }
                     }
@@ -304,9 +293,6 @@ fn highlight_tile(
         }
     }
 }
-
-// Example of getting/modifying neighbours:
-// let neighboring_entities = Neighbors::get_square_neighboring_positions(
 
 fn spawn_plant(
     mut commands: Commands,
@@ -328,7 +314,7 @@ fn spawn_plant(
                         pos = newpos;
                         if let Some(plant_ent) = tile_storage.get(&pos) {
                             if let Ok(tile_texture) = tile_query.get_mut(plant_ent) {
-                                if tile_texture.0 == Tile::Air as u32 {
+                                if tile_texture.0 == Tiles::AIR as u32 {
                                     plant_stack.push(plant_ent);
                                 } else {
                                     break;
@@ -351,7 +337,7 @@ fn spawn_plant(
                         status: PlantStatus::Growing
                     });
                     if let Ok(mut tile_texture) = tile_query.get_mut(*plant_ent) {
-                        tile_texture.0 = Tile::Stalk as u32;
+                        tile_texture.0 = Tiles::STALK as u32;
                     }
                 }
             }
