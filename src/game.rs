@@ -3,7 +3,7 @@ use bevy::math::swizzles::Vec3Swizzles;
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
-pub const PLAYA_SPEED: f32 = 250.0;
+pub const PLAYA_SPEED: f32 = 20.0;
 
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
@@ -12,7 +12,6 @@ impl Plugin for GamePlugin {
             .add_systems(
                 Update,
                 (
-                    move_with_keys,
                     assign_waypoints,
                     walk_path,
                     mouse_button_events,
@@ -148,23 +147,25 @@ fn game_setup(
     let player_pos = Vec3::new(window.width() / 2.0, window.height() / 2.0 + 50., 1.0);
 
     // Make the player
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("img/beep.png"),
-            transform: Transform::from_translation(player_pos),
-            sprite: Sprite {
-                //custom_size: Some(Vec2::new(50.0, 50.0)),
+    for _ in 0..30 {
+        commands.spawn((
+            SpriteBundle {
+                texture: asset_server.load("img/beep.png"),
+                transform: Transform::from_translation(player_pos),
+                sprite: Sprite {
+                    custom_size: Some(Vec2::new(32.0, 32.0)),
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        },
-        Playa,
-        OnGameScreen,
-        FollowPath {
-            end: player_pos.xy(),
-            done: true,
-        },
-    ));
+            Playa,
+            OnGameScreen,
+            FollowPath {
+                end: player_pos.xy(),
+                done: true,
+            },
+        ));
+    }
 
     /*commands.spawn((
         SpriteSheetBundle {
@@ -211,28 +212,31 @@ fn confine_to_window(
     mut playa_query: Query<(&Sprite, &mut Transform), With<Playa>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let (sprite, mut transform) = playa_query.single_mut();
-    let window: &Window = window_query.get_single().unwrap();
-    let hw = sprite.custom_size.unwrap_or(Vec2::ONE).x / 2.0;
-    let hh = sprite.custom_size.unwrap_or(Vec2::ONE).y / 2.0;
-    let x1 = hw;
-    let x2 = window.width() - hw;
-    let y1 = hh;
-    let y2 = window.height() - hh;
-    let mut t: Vec3 = transform.translation;
-    if t.x < x1 {
-        t.x = x1;
+        let window: &Window = window_query.get_single().unwrap();
+
+    for (sprite, mut transform) in &mut playa_query {
+        //let (sprite, mut transform) = playa_query.single_mut();
+        let hw = sprite.custom_size.unwrap_or(Vec2::ONE).x / 2.0;
+        let hh = sprite.custom_size.unwrap_or(Vec2::ONE).y / 2.0;
+        let x1 = hw;
+        let x2 = window.width() - hw;
+        let y1 = hh;
+        let y2 = window.height() - hh;
+        let mut t: Vec3 = transform.translation;
+        if t.x < x1 {
+            t.x = x1;
+        }
+        if t.x > x2 {
+            t.x = x2;
+        }
+        if t.y < y1 {
+            t.y = y1;
+        }
+        if t.y > y2 {
+            t.y = y2;
+        }
+        transform.translation = t;
     }
-    if t.x > x2 {
-        t.x = x2;
-    }
-    if t.y < y1 {
-        t.y = y1;
-    }
-    if t.y > y2 {
-        t.y = y2;
-    }
-    transform.translation = t;
 }
 
 fn cursor_position(windows: Query<&Window, With<PrimaryWindow>>) {
