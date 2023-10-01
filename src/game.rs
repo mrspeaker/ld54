@@ -194,13 +194,12 @@ fn mouse_button_events(
     for ev in &mut events {
         match ev.state {
             ButtonState::Pressed => {
-                screen_print!("Mouse button press: {:?}", ev.button);
+                // screen_print!("Mouse button press: {:?}", ev.button);
             }
             ButtonState::Released => {
                 if let Some(position) = pos {
                     organism::create_random_organsim(&mut commands, &assets, position);
                 }
-                screen_print!("Mouse button release: {:?}", ev.button);
             }
         }
     }
