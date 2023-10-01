@@ -85,21 +85,17 @@ impl Default for Pointer {
 fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load("img/tiles.png");
 
-    let map_size = TilemapSize { x: 32, y: 20 };
+    let map_size = TilemapSize { x: 25, y: 15 };
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(map_size);
 
-    for x in 0..map_size.x {
-        for y in 0..map_size.y {
+    for y in 0..map_size.y {
+        for x in 0..map_size.x {
             let tile_pos = TilePos { x, y };
             let mut tile_entity = commands.spawn(TileBundle {
                 position: tile_pos,
                 tilemap_id: TilemapId(tilemap_entity),
-                texture_index: TileTextureIndex(match y {
-                    0 => 16,
-                    1 => 18,
-                    _ => 0,
-                }),
+                texture_index: get_tile_idx(x, y, map_size),
                 ..Default::default()
             });
             let _ = match y {
@@ -140,6 +136,41 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
         Cursora,
     ));
 }
+
+fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
+
+    let tilemap = b"\
+    .........................\
+    .........................\
+    ......................###\
+    ########............##...\
+    ..................##.....\
+    ........................#\
+    ......####.........######\
+    .........................\
+    ####.........####........\
+    ....#..............###...\
+    .....#...................\
+    .........................\
+    X.........XXXX...........\
+    XX#######XXX########..#XX\
+    XXXXXXXXXXXXXXXXXXXXXXXXX";
+
+    let sxu: usize = size.x.try_into().unwrap();
+    let syu: usize = size.y.try_into().unwrap();
+    let xu: usize = x.try_into().unwrap();
+    let yu: usize = y.try_into().unwrap();
+    info!("{} {} {}", xu, yu, sxu);
+
+    let ch = tilemap[((syu - yu) - 1) * sxu + xu];
+
+    let idx = match ch {
+        b'#' => 18,
+        b'X' => 16,
+        _ => 0,
+    };
+    TileTextureIndex(idx)
+ }
 
 pub fn update_pointer(
     camera_q: Query<(&GlobalTransform, &Camera)>,
