@@ -59,12 +59,6 @@ fn setup(
         }),
         OnLogoScreen,
     ));
-
-    // Sound
-    commands.spawn(AudioBundle {
-        source: asset_server.load("sounds/squigge.ogg"),
-        ..default()
-    });
 }
 
 fn countdown(

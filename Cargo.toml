@@ -27,8 +27,24 @@ lto = "fat"
 incremental = false
 
 [dependencies]
-bevy = { version = "0.11.2" }
+bevy = { version = "0.11.3", default-features = false, features = [
+     "animation",
+     "bevy_asset",
+     "bevy_winit",
+     "bevy_core_pipeline",
+     "bevy_render",
+     "bevy_sprite",
+     "bevy_text",
+     "bevy_ui",
+     "png",
+     "zstd",
+     "x11",
+     "ktx2",
+     "filesystem_watcher",
+     "webgl2"
+]}
 rand = "0.8.5"
+bevy_kira_audio = { version = "0.16" }
 bevy-debug-text-overlay = "6"
 
 macros = { path = "macros" }

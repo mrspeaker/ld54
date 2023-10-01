@@ -16,6 +16,8 @@ use std::sync::OnceLock;
 use bevy::window::{PrimaryWindow, Cursor, CursorIcon};
 use bevy::{asset::HandleId, prelude::*};
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
+use bevy_kira_audio::prelude::*;
+use std::time::Duration;
 
 pub mod prelude {
     pub use bevy::prelude::*;
@@ -38,7 +40,7 @@ pub enum GameState {
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
+        .add_plugins((DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "LD54".into(),
                 canvas: Some("#game".to_owned()),
@@ -52,7 +54,8 @@ fn main() {
                 ..default()
             }),
             ..default()
-        }))
+        }),
+        AudioPlugin))
         .add_plugins(OverlayPlugin {
             font_size: 14.0,
             ..default()
@@ -69,8 +72,9 @@ fn main() {
 }
 
 fn setup(mut commands: Commands,     
-    window_query: Query<&Window, With<PrimaryWindow>>,
-    assets: Res<AssetServer>) {
+         window_query: Query<&Window, With<PrimaryWindow>>,
+         audio: Res<Audio>,
+         assets: Res<AssetServer>) {
     screen_print!(sec: 3.0, "Run main setup.");
     let window: &Window = window_query.get_single().unwrap();
     FONT.set(assets.load::<Font, _>("font/FredokaOne-Regular.ttf").id())
@@ -81,6 +85,10 @@ fn setup(mut commands: Commands,
         ..default()
     });
 
+    audio.play(assets.load("sounds/test.ogg"))
+        .loop_from(0.0)
+        .fade_in(AudioTween::new(Duration::from_secs(2), AudioEasing::OutPowi(2)))
+        .with_volume(0.1);
 }
 
 fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
@@ -88,4 +96,3 @@ fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands
         commands.entity(entity).despawn_recursive();
     }
 }
-

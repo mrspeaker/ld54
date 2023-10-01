@@ -4,6 +4,8 @@ use bevy_debug_text_overlay::screen_print;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy::input::{ButtonState, mouse::MouseButtonInput};
+use bevy_kira_audio::prelude::*;
+use std::time::Duration;
 
 use crate::GameState;
 
@@ -154,6 +156,9 @@ fn highlight_tile(
     ), Without<Cursora>>,
     mut tile_q: Query<&mut TileTextureIndex>,
     mut cursor: Query<&mut Transform, With<Cursora>>,
+    assets: Res<AssetServer>,
+    audio: Res<Audio>,
+
 ) {
     for (map_size, grid_size,
          map_type, tile_storage,
@@ -186,8 +191,11 @@ fn highlight_tile(
                         pointer.pressed = false;
                     }
 
-                    if pointer.is_down {
+                    if pointer.is_down && t.0 != pointer.tile {
                         t.0 = pointer.tile;
+                        audio.play(assets.load("sounds/blip.ogg"))
+                            .with_volume(0.3);
+
                     }
                 }
 
