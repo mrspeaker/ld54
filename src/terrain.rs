@@ -31,9 +31,16 @@ enum PlantType {
     Red,
 }
 
+enum PlantStatus {
+    Dead,
+    Growing,
+    Fruiting
+}
+
 #[derive(Component)]
 struct Plant {
     ptype: PlantType,
+    status: PlantStatus
 }
 
 #[derive(Component)]
@@ -97,7 +104,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
             });
             let _ = match y {
                 0 => tile_entity.insert(Colliding),
-                1 => tile_entity.insert(Topsoil),
+                1 => tile_entity.insert((Colliding, Topsoil)),
                 _ => tile_entity.insert(()),
             };
             tile_storage.set(&tile_pos, tile_entity.id());
@@ -218,7 +225,7 @@ fn highlight_tile(
                         t.0 = pointer.tile;
                         audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
                         if pointer.tile == 7 {
-                            commands.entity(tile_entity).insert(Topsoil);
+                            commands.entity(tile_entity).insert((Colliding, Topsoil));
                         }
                     }
                 }
@@ -270,6 +277,7 @@ fn spawn_plant(
                 for plant_ent in plant_stack {
                     commands.entity(*plant_ent).insert(Plant {
                         ptype: PlantType::Red,
+                        status: PlantStatus::Growing
                     });
                     if let Ok(mut tile_texture) = tile_query.get_mut(*plant_ent) {
                         tile_texture.0 = 8;
