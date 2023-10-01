@@ -107,17 +107,20 @@ pub fn update_pointer(
         for (cam_t, cam) in camera_q.iter() {
             if let Some(pos) = cam.viewport_to_world_2d(cam_t, cursor_moved.position) {
                 pointer.pos = pos;
-                pointer.pressed = false;
-                pointer.released = false;
-
+                // TODO: figure out how to set this reliably.
+                // Currently calling pointer.pressed = false after handling in highlight-tile
+                //pointer.pressed = false;
+                //pointer.released = false;
                 for ev in &mut events {
                     match ev.state {
                         ButtonState::Pressed => {
                             pointer.is_down = true;
                             pointer.pressed = true;
+                            pointer.released = true;
                         }
                         ButtonState::Released => {
                             pointer.is_down = false;
+                            pointer.pressed = false;
                             pointer.released = true;
                         }
                     }
