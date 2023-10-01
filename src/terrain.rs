@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use bevy::math::Vec4Swizzles;
-use bevy_debug_text_overlay::screen_print;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
+use bevy::input::{ButtonState, mouse::MouseButtonInput};
 
 use crate::GameState;
 
@@ -11,11 +11,10 @@ impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(TilemapPlugin)
-            .init_resource::<CursorPos>()
+            .init_resource::<Pointer>()
             .add_systems(OnEnter(GameState::InGame), terrain_setup)
-            //.add_systems(Update, update_map)
-            .add_systems(First, (update_cursor_pos).chain())
-            .add_systems(Update, (highlight_tile).run_if(in_state(GameState::InGame)));// Is this running even in non-game state?
+            .add_systems(First, (update_pointer).chain())
+            .add_systems(Update, (highlight_tile.after(update_pointer)).run_if(in_state(GameState::InGame)));// Is this running even in non-game state?
     }
 }
 
@@ -28,11 +27,33 @@ struct LastUpdate(f64);
 #[derive(Component)]
 struct LastTile(TilePos);
 
+
+#[derive(Resource)]
+pub struct Pointer {
+    pos: Vec2,
+    is_down: bool,
+    pressed: bool,
+    released: bool,
+    tile: u32
+}
+
+impl Default for Pointer {
+    fn default() -> Self {
+        Pointer {
+            pos: Vec2::new(-1000.0, -1000.0),
+            is_down: false,
+            pressed: false,
+            released: false,
+            tile: 0
+        }
+
+    }
+}
+
 fn terrain_setup(
     mut commands: Commands,
     assets: Res<AssetServer>
 ) {
-    info!("Info to make the texture appear, lol!"); // If I comment this, tilemap doesn't appear! Timing?
     let texture = assets.load("img/tiles.png");
 
     let map_size = TilemapSize { x: 32, y: 20 };
@@ -66,7 +87,7 @@ fn terrain_setup(
             storage: tile_storage,
             texture: TilemapTexture::Single(texture.clone()),
             tile_size,
-            transform: Transform::from_xyz(tile_size.x / 2.0, 0.0,0.0),//get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0),
+            transform: Transform::from_xyz(tile_size.x / 2.0, 0.0,0.5),
             ..Default::default()
         },
         LastUpdate(0.0),
@@ -76,7 +97,87 @@ fn terrain_setup(
 
 }
 
+pub fn update_pointer(
+    camera_q: Query<(&GlobalTransform, &Camera)>,
+    mut cursor_moved_events: EventReader<CursorMoved>,
+    mut pointer: ResMut<Pointer>,
+    mut events: EventReader<MouseButtonInput>,
+) {
+    for cursor_moved in cursor_moved_events.iter() {
+        for (cam_t, cam) in camera_q.iter() {
+            if let Some(pos) = cam.viewport_to_world_2d(cam_t, cursor_moved.position) {
+                pointer.pos = pos;
+                pointer.pressed = false;
+                pointer.released = false;
 
+                for ev in &mut events {
+                    match ev.state {
+                        ButtonState::Pressed => {
+                            pointer.is_down = true;
+                            pointer.pressed = true;
+                        }
+                        ButtonState::Released => {
+                            pointer.is_down = false;
+                            pointer.released = true;
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+fn highlight_tile(
+    mut pointer: ResMut<Pointer>,
+    mut tilemap_q: Query<(
+        &TilemapSize,
+        &TilemapGridSize,
+        &TilemapType,
+        &TileStorage,
+        &Transform,
+        &mut LastTile
+    )>,
+    mut tile_q: Query<&mut TileTextureIndex>,
+) {
+    for (map_size, grid_size,
+         map_type, tile_storage,
+         map_transform, mut last_tile) in tilemap_q.iter_mut() {
+
+        let cursor_in_map_pos: Vec2 = {
+            // Extend the cursor_pos vec3 by 0.0 and 1.0
+            let pos = Vec4::from((pointer.pos, 0.0, 1.0));
+            let cursor_in_map_pos = map_transform.compute_matrix().inverse() * pos;
+            cursor_in_map_pos.xy()
+        };
+
+        // world position to tile position.
+        if let Some(tile_pos) =
+            TilePos::from_world_pos(&cursor_in_map_pos, map_size, grid_size, map_type)
+        {
+            if let Some(tile_entity) = tile_storage.get(&tile_pos) {
+                let is_same = tile_pos.x != last_tile.0.x || tile_pos.y != last_tile.0.y;
+                if !is_same {
+                    last_tile.0 = tile_pos;
+                }
+
+                if let Ok(mut t) = tile_q.get_mut(tile_entity) {
+                    if pointer.pressed {
+                        pointer.tile = if t.0 == 0 { 7 } else { 0 };
+                        pointer.pressed = false;
+                    }
+
+                    if pointer.is_down {
+                        t.0 = pointer.tile;
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+// Not using this - leaving as an example of getting/modifying neighbours.
 fn update_map(
     time: Res<Time>,
     mut tilemap_query: Query<(
@@ -124,69 +225,6 @@ fn update_map(
         }
     }
 }
-
-#[derive(Resource)]
-pub struct CursorPos(Vec2);
-impl Default for CursorPos {
-    fn default() -> Self {
-        Self(Vec2::new(-1000.0, -1000.0))
-    }
-}
-
-pub fn update_cursor_pos(
-    camera_q: Query<(&GlobalTransform, &Camera)>,
-    mut cursor_moved_events: EventReader<CursorMoved>,
-    mut cursor_pos: ResMut<CursorPos>,
-) {
-    for cursor_moved in cursor_moved_events.iter() {
-        for (cam_t, cam) in camera_q.iter() {
-            if let Some(pos) = cam.viewport_to_world_2d(cam_t, cursor_moved.position) {
-                *cursor_pos = CursorPos(pos);
-            }
-        }
-    }
-}
-
-fn highlight_tile(
-    mut commands: Commands,
-    cursor_pos: Res<CursorPos>,
-    mut tilemap_q: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &TilemapType,
-        &TileStorage,
-        &Transform,
-        &mut LastTile
-    )>,
-    mut tile_q: Query<&mut TileTextureIndex>,
-) {
-    for (map_size, grid_size,
-         map_type, tile_storage,
-         map_transform, mut last_tile) in tilemap_q.iter_mut() {
-        let cursor_pos: Vec2 = cursor_pos.0;
-        let cursor_in_map_pos: Vec2 = {
-            // Extend the cursor_pos vec3 by 0.0 and 1.0
-            let cursor_pos = Vec4::from((cursor_pos, 0.0, 1.0));
-            let cursor_in_map_pos = map_transform.compute_matrix().inverse() * cursor_pos;
-            cursor_in_map_pos.xy()
-        };
-        // Once we have a world position we can transform it into a possible tile position.
-        if let Some(tile_pos) =
-            TilePos::from_world_pos(&cursor_in_map_pos, map_size, grid_size, map_type)
-        {
-            if let Some(tile_entity) = tile_storage.get(&tile_pos) {
-                if tile_pos.x != last_tile.0.x || tile_pos.y != last_tile.0.y {
-                    screen_print!("Tile: {:?}", tile_entity);
-                    last_tile.0 = tile_pos;
-                    if let Ok(mut t) = tile_q.get_mut(tile_entity) {
-                        t.0 = if t.0 == 5 { 1 } else { 5 };
-                    }
-                }
-            }
-        }
-    }
-}
-
 
 /*
 Old tilemap for posterity
@@ -242,7 +280,7 @@ use bevy::sprite::MaterialMesh2dBundle;
             let tilemap_index = (((tile_y_count - 1) - y) * tile_x_count) + x;
             let color = color_from_char(tilemap[tilemap_index]);
 
-            /*commands.spawn(MaterialMesh2dBundle {
+            /*commands.spawn(MaterialMesh2Bdundle {
                 mesh: meshes
                     .add(shape::Quad::new(Vec2::new(TILE_SIZE, TILE_SIZE)).into())
                     .into(),

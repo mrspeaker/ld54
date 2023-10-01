@@ -33,7 +33,7 @@ fn splash_setup(
         SpriteBundle {
             texture: asset_server.load("img/bg.png"),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
-                .with_scale(Vec3::new(1.8, 1.62, 0.0)),
+                .with_scale(Vec3::new(1.7, 1.4, 0.0)),
             ..default()
         },
         OnSplashScreen,
@@ -42,9 +42,9 @@ fn splash_setup(
     // Character sprite
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("img/char.png"),
+            texture: asset_server.load("img/beep.png"),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 1.0)
-                .with_scale(Vec3::splat(0.5)),
+                .with_scale(Vec3::splat(1.0)),
             ..default()
         },
         OnSplashScreen,
