@@ -20,10 +20,14 @@ const MAX_PLANT_HEIGHT: u8 = 3;
 pub struct Tiles;
 impl Tiles {
     pub const AIR: u32 = 0;
-    pub const DIRT: u32 = 18;
-    pub const ROCK: u32 = 27;
+    pub const DIRT: u32 = 2;
+    pub const ROCK: u32 = 11;
     pub const LEAVES: u32 = 7;
     pub const STALK: u32 = 8;
+    pub const POO_PINK: u32 = 64;
+    pub const EGG_PINK: u32 = 48;
+    pub const POO_BLUE: u32 = 65;
+    pub const EGG_BLUE: u32 = 49;
 }
 
 pub struct TerrainPlugin;
@@ -164,19 +168,19 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
 fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
 
     let tilemap = b"\
-    .......................\
-    .......................\
-    ....................###\
-    ######............##...\
+    .1.....................\
+    .t..............1......\
+    .t..............t...###\
+    ######..........t.##...\
     ................##.....\
-    ......................#\
-    ....####.........######\
-    .......................\
+    ............2.........#\
+    ....####....t....######\
+    .a..........t.b........\
     ##.........####........\
     ..#..............###...\
-    ...#...................\
-    .......................\
-    ........XXXX...........\
+    ...#...........L.......\
+    ...............t.......\
+    ........XXXX...t.......\
     #######XXX########..#XX\
     XXXXXXXXXXXXXXXXXXXXXXX";
 
@@ -191,6 +195,12 @@ fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
     let idx = match ch {
         b'#' => Tiles::DIRT,
         b'X' => Tiles::ROCK,
+        b'1' => Tiles::POO_PINK,
+        b'a' => Tiles::EGG_PINK,
+        b'2' => Tiles::POO_BLUE,
+        b'b' => Tiles::EGG_BLUE,
+        b't' => Tiles::STALK,
+        b'L' => Tiles::LEAVES,
         _ => Tiles::AIR,
     };
     TileTextureIndex(idx as u32)

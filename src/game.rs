@@ -135,8 +135,6 @@ fn game_setup(
     window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let window: &Window = window_query.get_single().unwrap();
 
@@ -163,16 +161,18 @@ fn game_setup(
 
     // Make the beez
     let mut rng = rand::thread_rng();
-    for _ in 0..15 {
+    for i in 0..10 {
         let bee_pos = Vec3::new(
             rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
             rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
             Layers::MIDGROUND);
 
+        let texture = asset_server.load(if i < 5 {"img/beep.png"} else { "img/beeb.png" });
+
         commands.spawn((
             RumbleBee,
             SpriteBundle {
-                texture: asset_server.load("img/beep.png"),
+                texture,
                 transform: Transform::from_translation(bee_pos),
                 sprite: Sprite {
                     custom_size: Some(Vec2::new(32.0, 32.0)),
@@ -203,7 +203,7 @@ fn game_setup(
 
     commands.spawn((SpriteBundle {
         sprite: Sprite {
-            color: Color::rgb(0.25, 0.25, 0.35),
+            color: Color::hsl(120., 0.5, 0.2),
             custom_size: Some(Vec2::new(GAP_LEFT, window.height())),
             ..default()
         },
