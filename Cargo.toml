@@ -32,5 +32,5 @@ rand = "0.8.5"
 bevy-debug-text-overlay = "6"
 
 macros = { path = "macros" }
-bevy_ecs_tilemap = { version = "0.11.0", features=["atlas"] }
+bevy_ecs_tilemap = { version = "0.11.0" }
 pathfinding = "4.3.2"
