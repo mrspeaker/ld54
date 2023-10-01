@@ -8,6 +8,26 @@ use rand::seq::SliceRandom;
 
 use crate::GameState;
 
+#[repr(u32)]
+enum Tile {
+    Air = 0,
+    Dirt = 18,
+    Rock = 16,
+    Leaves = 7,
+    Stalk = 8
+}
+impl From<u32> for Tile {
+    fn from(num: u32) -> Self {
+        match num {
+            0 => Tile::Air,
+            7 => Tile::Leaves,
+            8 => Tile::Stalk,
+            16 => Tile::Rock,
+            _ => Tile::Air
+        }
+    }
+}
+
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
@@ -165,11 +185,11 @@ fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
     let ch = tilemap[((syu - yu) - 1) * sxu + xu];
 
     let idx = match ch {
-        b'#' => 18,
-        b'X' => 16,
-        _ => 0,
+        b'#' => Tile::Dirt,
+        b'X' => Tile::Rock,
+        _ => Tile::Air,
     };
-    TileTextureIndex(idx)
+    TileTextureIndex(idx as u32)
  }
 
 pub fn update_pointer(
@@ -248,14 +268,18 @@ fn highlight_tile(
 
                 if let Ok(mut t) = tile_q.get_mut(tile_entity) {
                     if pointer.pressed {
-                        pointer.tile = if t.0 == 0 { 7 } else { 0 };
+                        pointer.tile = match Tile::from(t.0) {
+                            Tile::Air => Tile::Leaves,
+                            Tile::Rock => Tile::Rock,
+                            _ => Tile::Air
+                        } as u32;
                         pointer.pressed = false;
                     }
 
                     if pointer.is_down && t.0 != pointer.tile {
                         t.0 = pointer.tile;
                         audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
-                        if pointer.tile == 7 {
+                        if pointer.tile == Tile::Leaves as u32 {
                             commands.entity(tile_entity).insert((Colliding, Topsoil));
                         }
                     }
@@ -288,7 +312,7 @@ fn spawn_plant(
                         pos = newpos;
                         if let Some(plant_ent) = tile_storage.get(&pos) {
                             if let Ok(tile_texture) = tile_query.get_mut(plant_ent) {
-                                if tile_texture.0 == 0 {
+                                if tile_texture.0 == Tile::Air as u32 {
                                     plant_stack.push(plant_ent);
                                 } else {
                                     break;
@@ -311,7 +335,7 @@ fn spawn_plant(
                         status: PlantStatus::Growing
                     });
                     if let Ok(mut tile_texture) = tile_query.get_mut(*plant_ent) {
-                        tile_texture.0 = 8;
+                        tile_texture.0 = Tile::Stalk as u32;
                     }
                 }
             }
