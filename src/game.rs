@@ -14,6 +14,7 @@ impl Plugin for GamePlugin {
                 (
                     assign_waypoints,
                     walk_path,
+                    move_bob,
                     mouse_button_events,
                     cursor_position,
                     confine_to_window,
@@ -31,6 +32,9 @@ struct FollowPath {
     end: Vec2,
     done: bool,
 }
+
+#[derive(Component)]
+struct Bob;
 
 #[derive(Component)]
 struct OnGameScreen;
@@ -64,8 +68,8 @@ fn assign_waypoints(
     let mut rng = rand::thread_rng();
     for (mut follow_path, _transform) in &mut query {
         if follow_path.done {
-            let x: f32 = rng.gen_range(0.0..=1.0) * window.width();
-            let y: f32 = rng.gen_range(0.0..=1.0) * window.height();
+            let x: f32 = rng.gen_range(0.0..=1.0) * (window.width() - 20.0) + 10.0;
+            let y: f32 = rng.gen_range(0.0..=1.0) * (window.height() - 20.0) + 10.0;
 
             follow_path.end = Vec2::new(x, y);
             follow_path.done = false;
@@ -95,6 +99,12 @@ fn walk_path(time: Res<Time>, mut query: Query<(&mut FollowPath, &mut Transform)
             transform.translation.x = new_pos.x;
             transform.translation.y = new_pos.y;
         }
+    }
+}
+
+fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, With<Bob>)>) {
+    for (mut transform, _bob) in &mut pos {
+        transform.translation.y += ((time.elapsed_seconds() + transform.translation.x) * 4.0).sin() * 0.1;
     }
 }
 
@@ -147,7 +157,7 @@ fn game_setup(
     let player_pos = Vec3::new(window.width() / 2.0, window.height() / 2.0 + 50., 1.0);
 
     // Make the player
-    for _ in 0..30 {
+    for _ in 0..15 {
         commands.spawn((
             SpriteBundle {
                 texture: asset_server.load("img/beep.png"),
@@ -164,6 +174,7 @@ fn game_setup(
                 end: player_pos.xy(),
                 done: true,
             },
+            Bob
         ));
     }
 

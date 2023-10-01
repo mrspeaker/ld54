@@ -156,11 +156,11 @@ fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
     XX#######XXX########..#XX\
     XXXXXXXXXXXXXXXXXXXXXXXXX";
 
+    // TODO: how to do this nicely?
     let sxu: usize = size.x.try_into().unwrap();
     let syu: usize = size.y.try_into().unwrap();
     let xu: usize = x.try_into().unwrap();
     let yu: usize = y.try_into().unwrap();
-    info!("{} {} {}", xu, yu, sxu);
 
     let ch = tilemap[((syu - yu) - 1) * sxu + xu];
 
