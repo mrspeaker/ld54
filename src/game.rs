@@ -1,5 +1,7 @@
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
+use rand::Rng;
+use bevy::math::swizzles::Vec3Swizzles;
 
 pub const PLAYA_SPEED: f32 = 250.0;
 
@@ -12,15 +14,25 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     move_with_keys,
+                    assign_waypoints,
+                    walk_path,
                     mouse_button_events,
                     cursor_position,
                     confine_to_window,
                     animate_sprite,
+                    bevy::window::close_on_esc,
                 )
                     .run_if(in_state(GameState::InGame)),
             )
-            .add_systems(OnExit(GameState::InGame), despawn_screen::<OnGameScreen>);
+        .add_systems(OnExit(GameState::InGame), despawn_screen::<OnGameScreen>);
     }
+}
+
+
+#[derive(Component)]
+struct FollowPath {
+    end: Vec2,
+    done: bool,
 }
 
 #[derive(Component)]
@@ -44,6 +56,53 @@ struct AnimationTimer(Timer);
 #[derive(Resource)]
 struct GameData {
     tiles: usize,
+}
+
+fn assign_waypoints(
+    mut query: Query<(&mut FollowPath, &Transform)>, 
+    window_query: Query<&Window, With<PrimaryWindow>>)
+{
+    let window: &Window = window_query.get_single().unwrap();
+
+    let mut rng = rand::thread_rng();
+    for (mut follow_path, transform) in query.iter_mut() {
+        if follow_path.done {
+            let x: f32 = rng.gen_range(0.0..=1.0) * window.width();    
+            let y: f32 = rng.gen_range(0.0..=1.0) * window.height();  
+
+            follow_path.end = Vec2::new(x, y);
+            follow_path.done = false;
+        }
+    }
+}
+
+fn walk_path(
+    time: Res<Time>,
+    mut query: Query<(&mut FollowPath, &mut Transform)>) {
+    
+    let dt = time.delta_seconds();
+    for (mut follow_path, mut transform) in query.iter_mut() {
+        if !follow_path.done {
+
+            let p = transform.translation.xy();
+            let end = follow_path.end;
+            let path = end - p;
+
+            let path_length = path.length();
+            let dir = path / path_length;
+            let mut movement_dist = PLAYA_SPEED * dt;
+
+            if movement_dist >= path_length {
+                movement_dist = path_length;
+                follow_path.done = true;
+            }
+
+            let new_pos = p + (dir * movement_dist);
+
+            transform.translation.x = new_pos.x;
+            transform.translation.y = new_pos.y;
+        }
+    }
 }
 
 fn animate_sprite(
@@ -92,11 +151,13 @@ fn game_setup(
         OnGameScreen,
     ));
 
+    let player_pos = Vec3::new(window.width() / 2.0, window.height() / 2.0 + 50., 1.0);
+
     // Make the player
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("img/beep.png"),
-            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0 + 50., 1.0),
+            transform: Transform::from_translation(player_pos),
             sprite: Sprite {
                 //custom_size: Some(Vec2::new(50.0, 50.0)),
                 ..default()
@@ -105,6 +166,7 @@ fn game_setup(
         },
         Playa,
         OnGameScreen,
+        FollowPath { end: player_pos.xy(), done: true },
     ));
 
     commands.spawn((
