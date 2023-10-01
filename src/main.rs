@@ -13,7 +13,7 @@ pub mod terrain;
 
 use std::sync::OnceLock;
 
-use bevy::window::{PrimaryWindow, Cursor, CursorIcon};
+use bevy::window::{Cursor, CursorIcon, PrimaryWindow};
 use bevy::{asset::HandleId, prelude::*};
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_kira_audio::prelude::*;
@@ -40,22 +40,24 @@ pub enum GameState {
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
-        .add_plugins((DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "LD54".into(),
-                canvas: Some("#game".to_owned()),
-                resolution: (500.0 * 2.0, 300.0 * 2.0).into(),
-                fit_canvas_to_parent: false,
-                cursor: Cursor {
-                    icon: CursorIcon::Crosshair,
-                    visible: true,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "LD54".into(),
+                    canvas: Some("#game".to_owned()),
+                    resolution: (500.0 * 2.0, 300.0 * 2.0).into(),
+                    fit_canvas_to_parent: false,
+                    cursor: Cursor {
+                        icon: CursorIcon::Crosshair,
+                        visible: true,
+                        ..default()
+                    },
                     ..default()
-                },
+                }),
                 ..default()
             }),
-            ..default()
-        }),
-        AudioPlugin))
+            AudioPlugin,
+        ))
         .add_plugins(OverlayPlugin {
             font_size: 14.0,
             ..default()
@@ -66,15 +68,17 @@ fn main() {
             logo::LogoPlugin,
             splash::SplashPlugin,
             game::GamePlugin,
-            terrain::TerrainPlugin
+            terrain::TerrainPlugin,
         ))
         .run();
 }
 
-fn setup(mut commands: Commands,     
-         window_query: Query<&Window, With<PrimaryWindow>>,
-         audio: Res<Audio>,
-         assets: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    audio: Res<Audio>,
+    assets: Res<AssetServer>,
+) {
     screen_print!(sec: 3.0, "Run main setup.");
     let window: &Window = window_query.get_single().unwrap();
     FONT.set(assets.load::<Font, _>("font/FredokaOne-Regular.ttf").id())
@@ -85,9 +89,13 @@ fn setup(mut commands: Commands,
         ..default()
     });
 
-    audio.play(assets.load("sounds/test.ogg"))
+    audio
+        .play(assets.load("sounds/test.ogg"))
         .loop_from(0.0)
-        .fade_in(AudioTween::new(Duration::from_secs(2), AudioEasing::OutPowi(2)))
+        .fade_in(AudioTween::new(
+            Duration::from_secs(2),
+            AudioEasing::OutPowi(2),
+        ))
         .with_volume(0.1);
 }
 

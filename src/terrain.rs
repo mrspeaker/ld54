@@ -1,9 +1,9 @@
-use bevy::prelude::*;
+use bevy::input::{mouse::MouseButtonInput, ButtonState};
 use bevy::math::Vec4Swizzles;
+use bevy::prelude::*;
 use bevy_debug_text_overlay::screen_print;
-use bevy_ecs_tilemap::prelude::*;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
-use bevy::input::{ButtonState, mouse::MouseButtonInput};
+use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
 use std::time::Duration;
 
@@ -12,14 +12,34 @@ use crate::GameState;
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(TilemapPlugin)
+        app.add_plugins(TilemapPlugin)
             .init_resource::<Pointer>()
             .add_systems(OnEnter(GameState::InGame), terrain_setup)
             .add_systems(First, (update_pointer).chain())
-            .add_systems(Update, (highlight_tile.after(update_pointer)).run_if(in_state(GameState::InGame)));// Is this running even in non-game state?
+            .add_systems(
+                Update,
+                (highlight_tile.after(update_pointer), spawn_plant)
+                    .run_if(in_state(GameState::InGame)),
+            ); // Is this running even in non-game state?
     }
 }
+
+enum PlantType {
+    Green,
+    Blue,
+    Red,
+}
+
+#[derive(Component)]
+struct Plant {
+    ptype: PlantType,
+}
+
+#[derive(Component)]
+struct Topsoil;
+
+#[derive(Component)]
+struct Colliding;
 
 #[derive(Component)]
 struct TileOffset(u16);
@@ -33,14 +53,13 @@ struct LastTile(TilePos);
 #[derive(Component)]
 pub struct Cursora;
 
-
 #[derive(Resource)]
 pub struct Pointer {
     pos: Vec2,
     is_down: bool,
     pressed: bool,
     released: bool,
-    tile: u32
+    tile: u32,
 }
 
 impl Default for Pointer {
@@ -50,16 +69,12 @@ impl Default for Pointer {
             is_down: false,
             pressed: false,
             released: false,
-            tile: 0
+            tile: 0,
         }
-
     }
 }
 
-fn terrain_setup(
-    mut commands: Commands,
-    assets: Res<AssetServer>
-) {
+fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load("img/tiles.png");
 
     let map_size = TilemapSize { x: 32, y: 20 };
@@ -69,15 +84,22 @@ fn terrain_setup(
     for x in 0..map_size.x {
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
-            let tile_entity = commands
-                .spawn(TileBundle {
-                    position: tile_pos,
-                    tilemap_id: TilemapId(tilemap_entity),
-                    texture_index: TileTextureIndex(0),
-                    ..Default::default()
-                })
-                .id();
-            tile_storage.set(&tile_pos, tile_entity);
+            let mut tile_entity = commands.spawn(TileBundle {
+                position: tile_pos,
+                tilemap_id: TilemapId(tilemap_entity),
+                texture_index: TileTextureIndex(match y {
+                    0 => 155,
+                    1 => 7,
+                    _ => 0,
+                }),
+                ..Default::default()
+            });
+            let _ = match y {
+                0 => tile_entity.insert(Colliding),
+                1 => tile_entity.insert(Topsoil),
+                _ => tile_entity.insert(()),
+            };
+            tile_storage.set(&tile_pos, tile_entity.id());
         }
     }
 
@@ -93,12 +115,12 @@ fn terrain_setup(
             storage: tile_storage,
             texture: TilemapTexture::Single(texture.clone()),
             tile_size,
-            transform: Transform::from_xyz(tile_size.x / 2.0, 0.0,0.5),
+            transform: Transform::from_xyz(tile_size.x / 2.0, 0.0, 0.5),
             ..Default::default()
         },
         LastUpdate(0.0),
         TileOffset(1),
-        LastTile(TilePos::new(0,0))
+        LastTile(TilePos::new(0, 0)),
     ));
 
     commands.spawn((
@@ -107,7 +129,7 @@ fn terrain_setup(
             transform: Transform::from_xyz(0.0, 0.0, 1.0),
             ..default()
         },
-        Cursora
+        Cursora,
     ));
 }
 
@@ -130,11 +152,9 @@ pub fn update_pointer(
                         ButtonState::Pressed => {
                             pointer.is_down = true;
                             pointer.pressed = true;
-                            pointer.released = true;
                         }
                         ButtonState::Released => {
                             pointer.is_down = false;
-                            pointer.pressed = false;
                             pointer.released = true;
                         }
                     }
@@ -145,25 +165,27 @@ pub fn update_pointer(
 }
 
 fn highlight_tile(
+    mut commands: Commands,
     mut pointer: ResMut<Pointer>,
-    mut tilemap_q: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &TilemapType,
-        &TileStorage,
-        &Transform,
-        &mut LastTile
-    ), Without<Cursora>>,
+    mut tilemap_q: Query<
+        (
+            &TilemapSize,
+            &TilemapGridSize,
+            &TilemapType,
+            &TileStorage,
+            &Transform,
+            &mut LastTile,
+        ),
+        Without<Cursora>,
+    >,
     mut tile_q: Query<&mut TileTextureIndex>,
     mut cursor: Query<&mut Transform, With<Cursora>>,
     assets: Res<AssetServer>,
     audio: Res<Audio>,
-
 ) {
-    for (map_size, grid_size,
-         map_type, tile_storage,
-         map_transform, mut last_tile) in tilemap_q.iter_mut() {
-
+    for (map_size, grid_size, map_type, tile_storage, map_transform, mut last_tile) in
+        tilemap_q.iter_mut()
+    {
         let cursor_in_map_pos: Vec2 = {
             // Extend the cursor_pos vec3 by 0.0 and 1.0
             let pos = Vec4::from((pointer.pos, 0.0, 1.0));
@@ -193,12 +215,12 @@ fn highlight_tile(
 
                     if pointer.is_down && t.0 != pointer.tile {
                         t.0 = pointer.tile;
-                        audio.play(assets.load("sounds/blip.ogg"))
-                            .with_volume(0.3);
-
+                        audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
+                        if pointer.tile == 7 {
+                            commands.entity(tile_entity).insert(Topsoil);
+                        }
                     }
                 }
-
             }
         }
     }
@@ -207,12 +229,7 @@ fn highlight_tile(
 // Not using this - leaving as an example of getting/modifying neighbours.
 fn update_map(
     time: Res<Time>,
-    mut tilemap_query: Query<(
-        &mut TileOffset,
-        &mut LastUpdate,
-        &TileStorage,
-        &TilemapSize,
-    )>,
+    mut tilemap_query: Query<(&mut TileOffset, &mut LastUpdate, &TileStorage, &TilemapSize)>,
     mut tile_query: Query<&mut TileTextureIndex>,
 ) {
     let current_time = time.elapsed_seconds_f64();
@@ -249,6 +266,35 @@ fn update_map(
                 }
             }
             last_update.0 = current_time;
+        }
+    }
+}
+
+fn spawn_plant(
+    mut commands: Commands,
+    key_in: Res<Input<KeyCode>>,
+    mut tilemap_query: Query<(&TileStorage, &TilemapSize)>,
+    query: Query<(Entity, &TilePos), With<Topsoil>>,
+    mut tile_query: Query<&mut TileTextureIndex>,
+) {
+    for (tile_storage, _map_size) in tilemap_query.iter_mut() {
+        if key_in.pressed(KeyCode::Space) {
+            for (ent, pos) in query.iter() {
+                if pos.x % 4 == 0 {
+                    if let Some(new_ent) = tile_storage.get(&TilePos {
+                        x: pos.x,
+                        y: pos.y + 1,
+                    }) {
+                        commands.entity(ent).remove::<Topsoil>();
+                        commands.entity(new_ent).insert(Plant {
+                            ptype: PlantType::Red,
+                        });
+                        if let Ok(mut tile_texture) = tile_query.get_mut(new_ent) {
+                            tile_texture.0 = 48;
+                        }
+                    }
+                }
+            }
         }
     }
 }

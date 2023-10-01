@@ -1,15 +1,14 @@
 use crate::{despawn_screen, prelude::*, GameState};
+use bevy::math::swizzles::Vec3Swizzles;
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
 use rand::Rng;
-use bevy::math::swizzles::Vec3Swizzles;
 
 pub const PLAYA_SPEED: f32 = 250.0;
 
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(OnEnter(GameState::InGame), game_setup)
+        app.add_systems(OnEnter(GameState::InGame), game_setup)
             .add_systems(
                 Update,
                 (
@@ -24,10 +23,9 @@ impl Plugin for GamePlugin {
                 )
                     .run_if(in_state(GameState::InGame)),
             )
-        .add_systems(OnExit(GameState::InGame), despawn_screen::<OnGameScreen>);
+            .add_systems(OnExit(GameState::InGame), despawn_screen::<OnGameScreen>);
     }
 }
-
 
 #[derive(Component)]
 struct FollowPath {
@@ -59,16 +57,16 @@ struct GameData {
 }
 
 fn assign_waypoints(
-    mut query: Query<(&mut FollowPath, &Transform)>, 
-    window_query: Query<&Window, With<PrimaryWindow>>)
-{
+    mut query: Query<(&mut FollowPath, &Transform)>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
     let window: &Window = window_query.get_single().unwrap();
 
     let mut rng = rand::thread_rng();
     for (mut follow_path, transform) in query.iter_mut() {
         if follow_path.done {
-            let x: f32 = rng.gen_range(0.0..=1.0) * window.width();    
-            let y: f32 = rng.gen_range(0.0..=1.0) * window.height();  
+            let x: f32 = rng.gen_range(0.0..=1.0) * window.width();
+            let y: f32 = rng.gen_range(0.0..=1.0) * window.height();
 
             follow_path.end = Vec2::new(x, y);
             follow_path.done = false;
@@ -76,14 +74,10 @@ fn assign_waypoints(
     }
 }
 
-fn walk_path(
-    time: Res<Time>,
-    mut query: Query<(&mut FollowPath, &mut Transform)>) {
-    
+fn walk_path(time: Res<Time>, mut query: Query<(&mut FollowPath, &mut Transform)>) {
     let dt = time.delta_seconds();
     for (mut follow_path, mut transform) in query.iter_mut() {
         if !follow_path.done {
-
             let p = transform.translation.xy();
             let end = follow_path.end;
             let path = end - p;
@@ -166,7 +160,10 @@ fn game_setup(
         },
         Playa,
         OnGameScreen,
-        FollowPath { end: player_pos.xy(), done: true },
+        FollowPath {
+            end: player_pos.xy(),
+            done: true,
+        },
     ));
 
     commands.spawn((
