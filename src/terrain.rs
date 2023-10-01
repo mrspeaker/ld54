@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
+use rand::seq::SliceRandom;
 
 use crate::GameState;
 
@@ -21,6 +22,8 @@ impl Plugin for TerrainPlugin {
             ); // Is this running even in non-game state?
     }
 }
+
+const MAX_PLANT_HEIGHT: u8 = 3;
 
 enum PlantType {
     Green,
@@ -234,21 +237,42 @@ fn spawn_plant(
     query: Query<(Entity, &TilePos), With<Topsoil>>,
     mut tile_query: Query<&mut TileTextureIndex>,
 ) {
-    for (tile_storage, _map_size) in &mut tilemap_query {
+    for (tile_storage, map_size) in &mut tilemap_query {
         if key_in.pressed(KeyCode::Space) {
-            for (ent, pos) in query.iter() {
-                if pos.x % 4 == 0 {
-                    if let Some(new_ent) = tile_storage.get(&TilePos {
-                        x: pos.x,
-                        y: pos.y + 1,
-                    }) {
-                        commands.entity(ent).remove::<Topsoil>();
-                        commands.entity(new_ent).insert(Plant {
-                            ptype: PlantType::Red,
-                        });
-                        if let Ok(mut tile_texture) = tile_query.get_mut(new_ent) {
-                            tile_texture.0 = 8;
+            let mut possible_plants: Vec<(Entity, Vec<Entity>)> = vec![];
+            for (ent, pos) in &query {
+                let mut pos = *pos;
+                let mut plant_stack: Vec<Entity> = vec![];
+                for _iter in 1..=MAX_PLANT_HEIGHT {
+                    if let Some(newpos) =
+                        Neighbors::get_square_neighboring_positions(&pos, map_size, false).north
+                    {
+                        pos = newpos;
+                        if let Some(plant_ent) = tile_storage.get(&pos) {
+                            if let Ok(tile_texture) = tile_query.get_mut(plant_ent) {
+                                if tile_texture.0 == 0 {
+                                    plant_stack.push(plant_ent);
+                                } else {
+                                    break;
+                                }
+                            }
                         }
+                    } else {
+                        break;
+                    }
+                }
+                if !plant_stack.is_empty() {
+                    possible_plants.push((ent, plant_stack));
+                }
+            }
+            if let Some((soil_ent, plant_stack)) = possible_plants.choose(&mut rand::thread_rng()) {
+                commands.entity(*soil_ent).remove::<Topsoil>();
+                for plant_ent in plant_stack {
+                    commands.entity(*plant_ent).insert(Plant {
+                        ptype: PlantType::Red,
+                    });
+                    if let Ok(mut tile_texture) = tile_query.get_mut(*plant_ent) {
+                        tile_texture.0 = 8;
                     }
                 }
             }
