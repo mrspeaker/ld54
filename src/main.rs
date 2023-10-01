@@ -7,6 +7,7 @@
 pub mod game;
 pub mod logo;
 pub mod organism;
+pub mod pathfinding;
 pub mod splash;
 
 use std::sync::OnceLock;
