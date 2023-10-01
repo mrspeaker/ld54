@@ -98,7 +98,7 @@ fn game_setup(
             texture: asset_server.load("img/beep.png"),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0 + 50., 1.0),
             sprite: Sprite {
-                custom_size: Some(Vec2::new(50.0, 50.0)),
+                //custom_size: Some(Vec2::new(50.0, 50.0)),
                 ..default()
             },
             ..default()
