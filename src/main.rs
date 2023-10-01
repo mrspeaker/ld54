@@ -13,7 +13,7 @@ pub mod terrain;
 
 use std::sync::OnceLock;
 
-use bevy::window::PrimaryWindow;
+use bevy::window::{PrimaryWindow, Cursor, CursorIcon};
 use bevy::{asset::HandleId, prelude::*};
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 
@@ -29,9 +29,9 @@ pub static FONT: OnceLock<HandleId> = OnceLock::new();
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {
-    #[default]
     Logo,
     Splash,
+    #[default]
     InGame,
 }
 
@@ -44,6 +44,11 @@ fn main() {
                 canvas: Some("#game".to_owned()),
                 resolution: (500.0 * 2.0, 300.0 * 2.0).into(),
                 fit_canvas_to_parent: false,
+                cursor: Cursor {
+                    icon: CursorIcon::Crosshair,
+                    visible: true,
+                    ..default()
+                },
                 ..default()
             }),
             ..default()

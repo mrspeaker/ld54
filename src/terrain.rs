@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::math::Vec4Swizzles;
+use bevy_debug_text_overlay::screen_print;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy::input::{ButtonState, mouse::MouseButtonInput};
@@ -26,6 +27,9 @@ struct LastUpdate(f64);
 
 #[derive(Component)]
 struct LastTile(TilePos);
+
+#[derive(Component)]
+pub struct Cursora;
 
 
 #[derive(Resource)]
@@ -95,6 +99,14 @@ fn terrain_setup(
         LastTile(TilePos::new(0,0))
     ));
 
+    commands.spawn((
+        SpriteBundle {
+            texture: assets.load("img/cursor.png"),
+            transform: Transform::from_xyz(0.0, 0.0, 1.0),
+            ..default()
+        },
+        Cursora
+    ));
 }
 
 pub fn update_pointer(
@@ -127,7 +139,6 @@ pub fn update_pointer(
                 }
             }
         }
-
     }
 }
 
@@ -140,8 +151,9 @@ fn highlight_tile(
         &TileStorage,
         &Transform,
         &mut LastTile
-    )>,
+    ), Without<Cursora>>,
     mut tile_q: Query<&mut TileTextureIndex>,
+    mut cursor: Query<&mut Transform, With<Cursora>>,
 ) {
     for (map_size, grid_size,
          map_type, tile_storage,
@@ -158,6 +170,10 @@ fn highlight_tile(
         if let Some(tile_pos) =
             TilePos::from_world_pos(&cursor_in_map_pos, map_size, grid_size, map_type)
         {
+            let mut cursor_pos = cursor.single_mut();
+            cursor_pos.translation.x = tile_pos.x as f32 * grid_size.x + 16.0;
+            cursor_pos.translation.y = tile_pos.y as f32 * grid_size.y;
+
             if let Some(tile_entity) = tile_storage.get(&tile_pos) {
                 let is_same = tile_pos.x != last_tile.0.x || tile_pos.y != last_tile.0.y;
                 if !is_same {
