@@ -86,8 +86,8 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
                 position: tile_pos,
                 tilemap_id: TilemapId(tilemap_entity),
                 texture_index: TileTextureIndex(match y {
-                    0 => 155,
-                    1 => 7,
+                    0 => 16,
+                    1 => 18,
                     _ => 0,
                 }),
                 ..Default::default()
@@ -101,7 +101,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
         }
     }
 
-    let tile_size = TilemapTileSize { x: 32.0, y: 32.0 };
+    let tile_size = TilemapTileSize { x: 40.0, y: 40.0 };
     let grid_size = tile_size.into();
     let map_type = TilemapType::default();
 
@@ -113,7 +113,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
             storage: tile_storage,
             texture: TilemapTexture::Single(texture.clone()),
             tile_size,
-            transform: Transform::from_xyz(tile_size.x / 2.0, 0.0, 0.5),
+            transform: Transform::from_xyz(tile_size.x / 2.0, tile_size.y / 2.0, 0.5),
             ..Default::default()
         },
         LastUpdate(0.0),
@@ -196,8 +196,8 @@ fn highlight_tile(
             TilePos::from_world_pos(&cursor_in_map_pos, map_size, grid_size, map_type)
         {
             let mut cursor_pos = cursor.single_mut();
-            cursor_pos.translation.x = tile_pos.x as f32 * grid_size.x + 16.0;
-            cursor_pos.translation.y = tile_pos.y as f32 * grid_size.y;
+            cursor_pos.translation.x = tile_pos.x as f32 * grid_size.x + 20.0;
+            cursor_pos.translation.y = tile_pos.y as f32 * grid_size.y + 20.0;
 
             if let Some(tile_entity) = tile_storage.get(&tile_pos) {
                 let is_same = tile_pos.x != last_tile.0.x || tile_pos.y != last_tile.0.y;
@@ -224,49 +224,8 @@ fn highlight_tile(
     }
 }
 
-// Not using this - leaving as an example of getting/modifying neighbours.
-fn update_map(
-    time: Res<Time>,
-    mut tilemap_query: Query<(&mut TileOffset, &mut LastUpdate, &TileStorage, &TilemapSize)>,
-    mut tile_query: Query<&mut TileTextureIndex>,
-) {
-    let current_time = time.elapsed_seconds_f64();
-    for (mut offset_idx, mut last_update, tile_storage, map_size) in &mut tilemap_query {
-        if current_time - last_update.0 > 0.1 {
-            offset_idx.0 += 1;
-            if offset_idx.0 > 5 {
-                offset_idx.0 = 1;
-            }
-
-            let mut idx = offset_idx.0;
-
-            for x in (2..20).step_by(4) {
-                for y in (2..20).step_by(4) {
-                    // Grab the neighboring tiles
-                    let neighboring_entities = Neighbors::get_square_neighboring_positions(
-                        &TilePos { x, y },
-                        map_size,
-                        true,
-                    )
-                    .entities(tile_storage);
-
-                    // Iterate over neighbors
-                    for neighbor_entity in neighboring_entities.iter() {
-                        // Query the tile entities to change the colors
-                        if let Ok(mut tile_texture) = tile_query.get_mut(*neighbor_entity) {
-                            tile_texture.0 = u32::from(idx);
-                        }
-                    }
-                }
-                idx += 1;
-                if idx > 5 {
-                    idx = 1;
-                }
-            }
-            last_update.0 = current_time;
-        }
-    }
-}
+// Example of getting/modifying neighbours:
+// let neighboring_entities = Neighbors::get_square_neighboring_positions(
 
 fn spawn_plant(
     mut commands: Commands,
@@ -288,7 +247,7 @@ fn spawn_plant(
                             ptype: PlantType::Red,
                         });
                         if let Ok(mut tile_texture) = tile_query.get_mut(new_ent) {
-                            tile_texture.0 = 48;
+                            tile_texture.0 = 8;
                         }
                     }
                 }
