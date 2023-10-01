@@ -274,6 +274,7 @@ fn highlight_tile(
                             _ => Tile::Air
                         } as u32;
                         pointer.pressed = false;
+                        pointer.is_down = pointer.tile != Tile::Rock as u32;
                     }
 
                     if pointer.is_down && t.0 != pointer.tile {
