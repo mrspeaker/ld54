@@ -35,7 +35,7 @@ fn terrain_setup(
     info!("Info to make the texture appear, lol!"); // If I comment this, tilemap doesn't appear! Timing?
     let texture = assets.load("img/tiles.png");
 
-    let map_size = TilemapSize { x: 30, y: 20 };
+    let map_size = TilemapSize { x: 32, y: 20 };
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(map_size);
 
