@@ -166,7 +166,7 @@ fn game_setup(
         },
     ));
 
-    commands.spawn((
+    /*commands.spawn((
         SpriteSheetBundle {
             texture_atlas: texture_atlas_handle,
             sprite: TextureAtlasSprite::new(animation_indices.first),
@@ -176,17 +176,7 @@ fn game_setup(
         },
         animation_indices,
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-    ));
-
-    // commands.spawn((
-    //     SpriteBundle {
-    //         texture: asset_server.load("img/bg.png"),
-    //         transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
-    //             .with_scale(Vec3::new(1.8, 1.62, 0.0)),
-    //         ..default()
-    //     },
-    //     OnGameScreen,
-    // ));
+    ));*/
 
     commands.insert_resource(GameData { tiles: 1 });
 }
