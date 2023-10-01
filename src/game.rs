@@ -6,7 +6,8 @@ pub const PLAYA_SPEED: f32 = 250.0;
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::InGame), game_setup)
+        app
+            .add_systems(OnEnter(GameState::InGame), game_setup)
             .add_systems(
                 Update,
                 (
@@ -107,15 +108,15 @@ fn game_setup(
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
     ));
 
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("img/bg.png"),
-            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
-                .with_scale(Vec3::new(1.8, 1.62, 0.0)),
-            ..default()
-        },
-        OnGameScreen,
-    ));
+    // commands.spawn((
+    //     SpriteBundle {
+    //         texture: asset_server.load("img/bg.png"),
+    //         transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
+    //             .with_scale(Vec3::new(1.8, 1.62, 0.0)),
+    //         ..default()
+    //     },
+    //     OnGameScreen,
+    // ));
 
     commands.insert_resource(GameData { tiles: 1 });
 }
