@@ -55,8 +55,10 @@ fn update_ui(
     inv: Res<Inventory>,
     mut ui_dirt: Query<&mut Text, With<UIDirtAmount>>
 ) {
-    let dirts: u8 = inv.dirt;
-    for mut text in &mut ui_dirt {
-        text.sections[0].value = format!("{}", dirts);
+    if inv.is_changed() {
+        let dirts: u8 = inv.dirt;
+        for mut text in &mut ui_dirt {
+            text.sections[0].value = format!("{}", dirts);
+        }
     }
 }
