@@ -1,6 +1,6 @@
-use bevy::input::{mouse::MouseButtonInput, ButtonState};
 use bevy::math::Vec4Swizzles;
 use bevy::prelude::*;
+use bevy_debug_text_overlay::screen_print;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
@@ -8,6 +8,8 @@ use rand::seq::SliceRandom;
 
 use crate::GameState;
 use crate::Layers;
+use crate::inventory::Inventory;
+use crate::pointer::{Pointer, update_pointer};
 
 pub const MAP_COLS: u32 = 23;
 pub const MAP_ROWS: u32 = 15;
@@ -17,7 +19,8 @@ pub const GAP_BOTTOM: f32 = TILE_SIZE * 0.0;
 
 const MAX_PLANT_HEIGHT: u8 = 3;
 
-enum Tile {
+#[derive(Debug)]
+pub enum Tile {
     Air,
     Dirt { topsoil: bool, style: u8 },
     Rock { style: u8 },
@@ -59,6 +62,13 @@ impl Tile {
             48..=56 => Tile::Egg { style: tex as u8 },
             64..=72 => Tile::Poo { style: tex as u8 },
             _ => Tile::Unknown,
+        }
+    }
+    pub fn is_dirt_tex(tex: u32) -> bool {
+        let t = Tile::from_texture(tex);
+        match t {
+            Tile::Dirt { .. } => true,
+            _ => false
         }
     }
 }
@@ -116,26 +126,6 @@ pub struct Cursor;
 
 #[derive(Component)]
 pub struct Terrarium;
-
-#[derive(Resource)]
-pub struct Pointer {
-    pos: Vec2,
-    is_down: bool,
-    pressed: bool,
-    released: bool,
-    tile: Tile,
-}
-impl Default for Pointer {
-    fn default() -> Self {
-        Pointer {
-            pos: Vec2::new(-1000.0, -1000.0),
-            is_down: false,
-            pressed: false,
-            released: false,
-            tile: Tile::Unknown,
-        }
-    }
-}
 
 fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load("img/tiles.png");
@@ -255,37 +245,6 @@ fn get_tile_idx(x: u32, y: u32, size: TilemapSize) -> TileTextureIndex {
     TileTextureIndex(u32::from(idx))
 }
 
-pub fn update_pointer(
-    camera_q: Query<(&GlobalTransform, &Camera)>,
-    mut cursor_moved_events: EventReader<CursorMoved>,
-    mut pointer: ResMut<Pointer>,
-    mut events: EventReader<MouseButtonInput>,
-) {
-    for cursor_moved in &mut cursor_moved_events {
-        for (cam_t, cam) in camera_q.iter() {
-            if let Some(pos) = cam.viewport_to_world_2d(cam_t, cursor_moved.position) {
-                pointer.pos = pos;
-                // TODO: figure out how to set this reliably.
-                // Currently calling pointer.pressed = false after handling in highlight-tile
-                //pointer.pressed = false;
-                //pointer.released = false;
-                for ev in &mut events {
-                    match ev.state {
-                        ButtonState::Pressed => {
-                            pointer.is_down = true;
-                            pointer.pressed = true;
-                        }
-                        ButtonState::Released => {
-                            pointer.is_down = false;
-                            pointer.released = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 fn highlight_tile(
     mut commands: Commands,
     mut pointer: ResMut<Pointer>,
@@ -302,6 +261,7 @@ fn highlight_tile(
     >,
     mut tile_q: Query<&mut TileTextureIndex>,
     mut cursor: Query<&mut Transform, With<Cursor>>,
+    mut inv: ResMut<Inventory>,
     assets: Res<AssetServer>,
     audio: Res<Audio>,
 ) {
@@ -331,32 +291,39 @@ fn highlight_tile(
                 }
 
                 if let Ok(mut t) = tile_q.get_mut(tile_entity) {
-                    if pointer.pressed {
-                        pointer.tile = match Tile::from_texture(t.0) {
-                            Tile::Air => Tile::Dirt {
-                                style: 0,
-                                topsoil: true,
-                            },
-                            Tile::Rock { style } => Tile::Rock { style },
-                            _ => Tile::Air,
-                        };
-                        pointer.pressed = false;
-                        pointer.is_down = match pointer.tile {
-                            Tile::Rock { .. } => false,
-                            _ => true,
-                        }
-                    }
+                    // Update the tile texture and pointer
+                    pointer.set_active_item(Tile::from_texture(t.0));
 
-                    if pointer.is_down && t.0 != pointer.tile.texture() {
-                        t.0 = pointer.tile.texture();
+                    // Do some drawing
+                    let tex_idx = pointer.tile.texture();
+                    if pointer.is_down && t.0 != tex_idx {
+                        match (&pointer.tile, t.0) {
+                            // Draw dirt
+                            (Tile::Dirt { .. }, _) => {
+                                if inv.dirt > 0 {
+                                    inv.dirt -= 1;
+                                    t.0 = tex_idx;
+                                }}
+                            // Erase
+                            (Tile::Air, tex) if Tile::is_dirt_tex(tex) => {
+                                inv.dirt += 1;
+                                t.0 = tex_idx;
+                            },
+                            // Draw something else
+                            _ => { t.0 = tex_idx }
+                        }
+                        screen_print!("Inv: {:?}", inv);
+
+
+                        // Play some noise
                         audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
+
                         match pointer.tile {
                             Tile::Stalk { .. } => {
                                 commands.entity(tile_entity).insert((Colliding, Topsoil));
                             }
                             _ => (),
                         }
-                        {}
                     }
                 }
             }

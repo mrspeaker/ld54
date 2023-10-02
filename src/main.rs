@@ -10,6 +10,8 @@ pub mod organism;
 pub mod pathfinding;
 pub mod splash;
 pub mod terrain;
+pub mod pointer;
+pub mod inventory;
 
 use std::sync::OnceLock;
 
@@ -79,6 +81,7 @@ fn main() {
             splash::SplashPlugin,
             game::GamePlugin,
             terrain::TerrainPlugin,
+            inventory::UIPlugin
         ))
         .run();
 }
