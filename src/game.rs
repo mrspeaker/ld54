@@ -10,7 +10,7 @@ use rand::Rng;
 
 use crate::Layers;
 
-pub const RUMBLEBEE_SPEED: f32 = 20.0;
+pub const RUMBLEBEE_SPEED: f32 = 50.0;
 
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
@@ -21,7 +21,6 @@ impl Plugin for GamePlugin {
                 (
                     follow_path,
                     find_target,
-                    move_bob,
                     mouse_button_events,
                     cursor_position,
                     animate_sprite,

@@ -33,9 +33,11 @@ fn ui_setup(
         TextBundle::from_section(
             DIRT_AMOUNT.to_string(),
             TextStyle {
-                font: assets.load("font/FredokaOne-Regular.ttf"),
+                // Doesn't update if using custom font on desktop?!
+                //font: assets.load("font/FredokaOne-Regular.ttf"),
                 font_size: 50.0,
                 color: Color::WHITE,
+                ..default()
             },
         )
             .with_text_alignment(TextAlignment::Center)

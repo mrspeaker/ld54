@@ -329,8 +329,6 @@ fn highlight_tile(
                             // Draw something else
                             _ => { t.0 = tex_idx }
                         }
-                        screen_print!("Inv: {:?}", inv);
-
 
                         // Play some noise
                         audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
