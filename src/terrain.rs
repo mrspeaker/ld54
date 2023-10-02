@@ -21,6 +21,7 @@ pub struct Tiles;
 impl Tiles {
     pub const AIR: u32 = 0;
     pub const DIRT: u32 = 2;
+    pub const DIRT2: u32 = 18;
     pub const ROCK: u32 = 11;
     pub const LEAVES: u32 = 7;
     pub const STALK: u32 = 8;
@@ -169,19 +170,19 @@ fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
 
     let tilemap = b"\
     .1.....................\
-    .t..............1......\
+    .t..............L......\
     .t..............t...###\
     ######..........t.##...\
     ................##.....\
-    ............2.........#\
-    ....####....t....######\
+    ............2......LL.#\
+    ....LLLL....t....#####%\
     .a..........t.b........\
     ##.........####........\
-    ..#..............###...\
+    L.#..............###...\
     ...#...........L.......\
     ...............t.......\
-    ........XXXX...t.......\
-    #######XXX########..#XX\
+    ###......a.....t....###\
+    %%%#################%XX\
     XXXXXXXXXXXXXXXXXXXXXXX";
 
     // TODO: how to do this nicely?
@@ -194,6 +195,7 @@ fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
 
     let idx = match ch {
         b'#' => Tiles::DIRT,
+        b'%' => Tiles::DIRT2,
         b'X' => Tiles::ROCK,
         b'1' => Tiles::POO_PINK,
         b'a' => Tiles::EGG_PINK,
