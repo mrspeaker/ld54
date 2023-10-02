@@ -1,9 +1,12 @@
+use crate::terrain::{GAP_LEFT, TILE_SIZE};
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
-pub const PLAYA_SPEED: f32 = 20.0;
+use crate::Layers;
+
+pub const RUMBLEBEE_SPEED: f32 = 20.0;
 
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
@@ -14,9 +17,9 @@ impl Plugin for GamePlugin {
                 (
                     assign_waypoints,
                     walk_path,
+                    move_bob,
                     mouse_button_events,
                     cursor_position,
-                    confine_to_window,
                     animate_sprite,
                     bevy::window::close_on_esc,
                 )
@@ -33,10 +36,13 @@ struct FollowPath {
 }
 
 #[derive(Component)]
+struct Bob;
+
+#[derive(Component)]
 struct OnGameScreen;
 
 #[derive(Component)]
-struct Playa;
+struct RumbleBee;
 
 #[derive(Resource, Deref, DerefMut)]
 struct GameTimer(Timer);
@@ -64,8 +70,8 @@ fn assign_waypoints(
     let mut rng = rand::thread_rng();
     for (mut follow_path, _transform) in &mut query {
         if follow_path.done {
-            let x: f32 = rng.gen_range(0.0..=1.0) * window.width();
-            let y: f32 = rng.gen_range(0.0..=1.0) * window.height();
+            let x: f32 = rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT;
+            let y: f32 = rng.gen_range(0.0..=1.0) * (window.height()- TILE_SIZE) + TILE_SIZE;
 
             follow_path.end = Vec2::new(x, y);
             follow_path.done = false;
@@ -83,7 +89,7 @@ fn walk_path(time: Res<Time>, mut query: Query<(&mut FollowPath, &mut Transform)
 
             let path_length = path.length();
             let dir = path / path_length;
-            let mut movement_dist = PLAYA_SPEED * dt;
+            let mut movement_dist = RUMBLEBEE_SPEED * dt;
 
             if movement_dist >= path_length {
                 movement_dist = path_length;
@@ -95,6 +101,12 @@ fn walk_path(time: Res<Time>, mut query: Query<(&mut FollowPath, &mut Transform)
             transform.translation.x = new_pos.x;
             transform.translation.y = new_pos.y;
         }
+    }
+}
+
+fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, With<Bob>)>) {
+    for (mut transform, _bob) in &mut pos {
+        transform.translation.y += ((time.elapsed_seconds() + transform.translation.x) * 4.0).sin() * 0.1;
     }
 }
 
@@ -137,33 +149,44 @@ fn game_setup(
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("img/bg.png"),
-            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
+            transform: Transform::from_xyz(
+                window.width() / 2.0,
+                window.height() / 2.0,
+                Layers::BACKGROUND)
                 .with_scale(Vec3::new(1.7, 1.4, 0.0)),
             ..default()
         },
         OnGameScreen,
     ));
 
-    let player_pos = Vec3::new(window.width() / 2.0, window.height() / 2.0 + 50., 1.0);
+    // Make the beez
+    let mut rng = rand::thread_rng();
+    let num_beez = 6;
+    for i in 0..num_beez {
+        let bee_pos = Vec3::new(
+            rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
+            rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
+            Layers::MIDGROUND);
 
-    // Make the player
-    for _ in 0..30 {
+        let texture = asset_server.load(if i < num_beez / 2 {"img/beep.png"} else { "img/beeb.png" });
+
         commands.spawn((
+            RumbleBee,
             SpriteBundle {
-                texture: asset_server.load("img/beep.png"),
-                transform: Transform::from_translation(player_pos),
+                texture,
+                transform: Transform::from_translation(bee_pos),
                 sprite: Sprite {
-                    custom_size: Some(Vec2::new(32.0, 32.0)),
+                    custom_size: Some(Vec2::new(50.0, 50.0)),
                     ..default()
                 },
                 ..default()
             },
-            Playa,
             OnGameScreen,
             FollowPath {
-                end: player_pos.xy(),
+                end: bee_pos.xy(),
                 done: true,
             },
+            Bob
         ));
     }
 
@@ -177,7 +200,17 @@ fn game_setup(
         },
         animation_indices,
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-    ));*/
+));*/
+
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            color: Color::hsl(120., 0.5, 0.2),
+            custom_size: Some(Vec2::new(GAP_LEFT, window.height())),
+            ..default()
+        },
+        transform: Transform::from_xyz(GAP_LEFT/2.0, window.height()/2.0, Layers::UI),
+        ..default()
+    }, OnGameScreen));
 
     commands.insert_resource(GameData { tiles: 1 });
 }
@@ -185,7 +218,7 @@ fn game_setup(
 fn move_with_keys(
     key_in: Res<Input<KeyCode>>,
     time: Res<Time>,
-    mut query: Query<&mut Transform, With<Playa>>,
+    mut query: Query<&mut Transform, With<RumbleBee>>,
 ) {
     let mut dir = Vec3::ZERO;
     let mut transform = query.single_mut();
@@ -204,18 +237,17 @@ fn move_with_keys(
     }
     if dir.length() > 0.0 {
         dir = dir.normalize();
-        transform.translation += dir * PLAYA_SPEED * time.delta_seconds();
+        transform.translation += dir * RUMBLEBEE_SPEED * time.delta_seconds();
     }
 }
 
 fn confine_to_window(
-    mut playa_query: Query<(&Sprite, &mut Transform), With<Playa>>,
+    mut ent_q: Query<(&Sprite, &mut Transform), With<RumbleBee>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
         let window: &Window = window_query.get_single().unwrap();
 
-    for (sprite, mut transform) in &mut playa_query {
-        //let (sprite, mut transform) = playa_query.single_mut();
+    for (sprite, mut transform) in &mut ent_q {
         let hw = sprite.custom_size.unwrap_or(Vec2::ONE).x / 2.0;
         let hh = sprite.custom_size.unwrap_or(Vec2::ONE).y / 2.0;
         let x1 = hw;

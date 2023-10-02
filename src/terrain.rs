@@ -7,6 +7,29 @@ use bevy_kira_audio::prelude::*;
 use rand::seq::SliceRandom;
 
 use crate::GameState;
+use crate::Layers;
+
+pub const MAP_COLS: u32 = 23;
+pub const MAP_ROWS: u32 = 15;
+pub const TILE_SIZE: f32 = 40.0;
+pub const GAP_LEFT: f32 = TILE_SIZE * 2.0;
+pub const GAP_BOTTOM: f32 = TILE_SIZE * 0.0;
+
+const MAX_PLANT_HEIGHT: u8 = 3;
+
+pub struct Tiles;
+impl Tiles {
+    pub const AIR: u32 = 0;
+    pub const DIRT: u32 = 2;
+    pub const DIRT2: u32 = 18;
+    pub const ROCK: u32 = 11;
+    pub const LEAVES: u32 = 7;
+    pub const STALK: u32 = 8;
+    pub const POO_PINK: u32 = 64;
+    pub const EGG_PINK: u32 = 48;
+    pub const POO_BLUE: u32 = 65;
+    pub const EGG_BLUE: u32 = 49;
+}
 
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
@@ -19,11 +42,9 @@ impl Plugin for TerrainPlugin {
                 Update,
                 (highlight_tile.after(update_pointer), spawn_plant)
                     .run_if(in_state(GameState::InGame)),
-            ); // Is this running even in non-game state?
+            );
     }
 }
-
-const MAX_PLANT_HEIGHT: u8 = 3;
 
 enum PlantType {
     Green,
@@ -31,9 +52,16 @@ enum PlantType {
     Red,
 }
 
+enum PlantStatus {
+    Dead,
+    Growing,
+    Fruiting
+}
+
 #[derive(Component)]
 struct Plant {
     ptype: PlantType,
+    status: PlantStatus
 }
 
 #[derive(Component)]
@@ -52,7 +80,11 @@ struct LastUpdate(f64);
 struct LastTile(TilePos);
 
 #[derive(Component)]
-pub struct Cursora;
+pub struct Cursor;
+
+#[derive(Component)]
+pub struct Terrarium;
+
 
 #[derive(Resource)]
 pub struct Pointer {
@@ -62,7 +94,6 @@ pub struct Pointer {
     released: bool,
     tile: u32,
 }
-
 impl Default for Pointer {
     fn default() -> Self {
         Pointer {
@@ -78,37 +109,34 @@ impl Default for Pointer {
 fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load("img/tiles.png");
 
-    let map_size = TilemapSize { x: 32, y: 20 };
+    let map_size = TilemapSize { x: MAP_COLS, y: MAP_ROWS };
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(map_size);
 
-    for x in 0..map_size.x {
-        for y in 0..map_size.y {
+    for y in 0..map_size.y {
+        for x in 0..map_size.x {
             let tile_pos = TilePos { x, y };
             let mut tile_entity = commands.spawn(TileBundle {
                 position: tile_pos,
                 tilemap_id: TilemapId(tilemap_entity),
-                texture_index: TileTextureIndex(match y {
-                    0 => 16,
-                    1 => 18,
-                    _ => 0,
-                }),
+                texture_index: get_tile_idx(x, y, map_size),
                 ..Default::default()
             });
             let _ = match y {
                 0 => tile_entity.insert(Colliding),
-                1 => tile_entity.insert(Topsoil),
+                1 => tile_entity.insert((Colliding, Topsoil)),
                 _ => tile_entity.insert(()),
             };
             tile_storage.set(&tile_pos, tile_entity.id());
         }
     }
 
-    let tile_size = TilemapTileSize { x: 40.0, y: 40.0 };
+    let tile_size = TilemapTileSize { x: TILE_SIZE, y: TILE_SIZE };
     let grid_size = tile_size.into();
     let map_type = TilemapType::default();
 
     commands.entity(tilemap_entity).insert((
+        Terrarium,
         TilemapBundle {
             grid_size,
             map_type,
@@ -116,7 +144,11 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
             storage: tile_storage,
             texture: TilemapTexture::Single(texture.clone()),
             tile_size,
-            transform: Transform::from_xyz(tile_size.x / 2.0, tile_size.y / 2.0, 0.5),
+            transform: Transform::from_xyz(
+                TILE_SIZE / 2.0 + GAP_LEFT,
+                TILE_SIZE / 2.0 + GAP_BOTTOM,
+                Layers::MIDGROUND - 1.0
+            ),
             ..Default::default()
         },
         LastUpdate(0.0),
@@ -125,14 +157,56 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     ));
 
     commands.spawn((
+        Cursor,
         SpriteBundle {
             texture: assets.load("img/cursor.png"),
-            transform: Transform::from_xyz(0.0, 0.0, 1.0),
+            transform: Transform::from_xyz(0.0, 0.0, Layers::FOREGROUND),
             ..default()
         },
-        Cursora,
     ));
 }
+
+fn get_tile_idx(x: u32, y:u32, size: TilemapSize) -> TileTextureIndex {
+
+    let tilemap = b"\
+    .1.....................\
+    .t..............L......\
+    .t..............t...###\
+    ######..........t.##...\
+    ................##.....\
+    ............2......LL.#\
+    ....LLLL....t....#####%\
+    .a..........t.b........\
+    ##.........####........\
+    L.#..............###...\
+    ...#...........L.......\
+    ...............t.......\
+    ###......a.....t....###\
+    %%%#################%XX\
+    XXXXXXXXXXXXXXXXXXXXXXX";
+
+    // TODO: how to do this nicely?
+    let sxu: usize = size.x.try_into().unwrap();
+    let syu: usize = size.y.try_into().unwrap();
+    let xu: usize = x.try_into().unwrap();
+    let yu: usize = y.try_into().unwrap();
+
+    let ch = tilemap[((syu - yu) - 1) * sxu + xu];
+
+    let idx = match ch {
+        b'#' => Tiles::DIRT,
+        b'%' => Tiles::DIRT2,
+        b'X' => Tiles::ROCK,
+        b'1' => Tiles::POO_PINK,
+        b'a' => Tiles::EGG_PINK,
+        b'2' => Tiles::POO_BLUE,
+        b'b' => Tiles::EGG_BLUE,
+        b't' => Tiles::STALK,
+        b'L' => Tiles::LEAVES,
+        _ => Tiles::AIR,
+    };
+    TileTextureIndex(idx as u32)
+ }
 
 pub fn update_pointer(
     camera_q: Query<(&GlobalTransform, &Camera)>,
@@ -177,10 +251,10 @@ fn highlight_tile(
             &Transform,
             &mut LastTile,
         ),
-        Without<Cursora>,
+        Without<Cursor>,
     >,
     mut tile_q: Query<&mut TileTextureIndex>,
-    mut cursor: Query<&mut Transform, With<Cursora>>,
+    mut cursor: Query<&mut Transform, With<Cursor>>,
     assets: Res<AssetServer>,
     audio: Res<Audio>,
 ) {
@@ -199,8 +273,8 @@ fn highlight_tile(
             TilePos::from_world_pos(&cursor_in_map_pos, map_size, grid_size, map_type)
         {
             let mut cursor_pos = cursor.single_mut();
-            cursor_pos.translation.x = tile_pos.x as f32 * grid_size.x + 20.0;
-            cursor_pos.translation.y = tile_pos.y as f32 * grid_size.y + 20.0;
+            cursor_pos.translation.x = tile_pos.x as f32 * grid_size.x + GAP_LEFT + TILE_SIZE / 2.0;
+            cursor_pos.translation.y = tile_pos.y as f32 * grid_size.y + GAP_BOTTOM + TILE_SIZE / 2.0;
 
             if let Some(tile_entity) = tile_storage.get(&tile_pos) {
                 let is_same = tile_pos.x != last_tile.0.x || tile_pos.y != last_tile.0.y;
@@ -210,15 +284,20 @@ fn highlight_tile(
 
                 if let Ok(mut t) = tile_q.get_mut(tile_entity) {
                     if pointer.pressed {
-                        pointer.tile = if t.0 == 0 { 7 } else { 0 };
+                        pointer.tile = match t.0 {
+                            Tiles::AIR => Tiles::DIRT,
+                            Tiles::ROCK => Tiles::ROCK,
+                            _ => Tiles::AIR
+                        } as u32;
                         pointer.pressed = false;
+                        pointer.is_down = pointer.tile != Tiles::ROCK;
                     }
 
                     if pointer.is_down && t.0 != pointer.tile {
                         t.0 = pointer.tile;
                         audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
-                        if pointer.tile == 7 {
-                            commands.entity(tile_entity).insert(Topsoil);
+                        if pointer.tile == Tiles::LEAVES {
+                            commands.entity(tile_entity).insert((Colliding, Topsoil));
                         }
                     }
                 }
@@ -226,9 +305,6 @@ fn highlight_tile(
         }
     }
 }
-
-// Example of getting/modifying neighbours:
-// let neighboring_entities = Neighbors::get_square_neighboring_positions(
 
 fn spawn_plant(
     mut commands: Commands,
@@ -250,7 +326,7 @@ fn spawn_plant(
                         pos = newpos;
                         if let Some(plant_ent) = tile_storage.get(&pos) {
                             if let Ok(tile_texture) = tile_query.get_mut(plant_ent) {
-                                if tile_texture.0 == 0 {
+                                if tile_texture.0 == Tiles::AIR as u32 {
                                     plant_stack.push(plant_ent);
                                 } else {
                                     break;
@@ -270,78 +346,13 @@ fn spawn_plant(
                 for plant_ent in plant_stack {
                     commands.entity(*plant_ent).insert(Plant {
                         ptype: PlantType::Red,
+                        status: PlantStatus::Growing
                     });
                     if let Ok(mut tile_texture) = tile_query.get_mut(*plant_ent) {
-                        tile_texture.0 = 8;
+                        tile_texture.0 = Tiles::STALK as u32;
                     }
                 }
             }
         }
     }
 }
-
-/*
-Old tilemap for posterity
-
-use bevy::sprite::MaterialMesh2dBundle;
-//    mut meshes: ResMut<Assets<Mesh>>,
-//    mut materials: ResMut<Assets<ColorMaterial>>,
-
-    pub fn color_from_char(byte: u8) -> Color {
-        let c = byte as char;
-        match c {
-            '#' => Color::GRAY,
-            '.' => Color::BLUE,
-            _ => panic!("Bad char in tilemap"),
-        }
-    }
-
-    const TILE_SIZE: f32 = 20.0;
-
-    //            1         2         3         4         5         6         7
-    //  01234567890123456789012345678901234567890123456789012345678901234567890123456789
-    let tilemap = b"\
-        ................................................................................\
-        ................................................................................\
-        ................................................................................\
-        ................................................................................\
-        ................................................................................\
-        ########........................................................................\
-        ##############..................................................................\
-        .........#####..................................................................\
-        ................................................................................\
-        ................................................................................\
-        .....................................................................###########\
-        ......................................................................##########\
-        ..........................................................#.....................\
-        ..........................................................##....................\
-        ################..........................................###....###############\
-        ##################....................................##########################\
-        #####################....###....######.............###.#########################\
-        ################################################################################\
-        ################################################################################\
-        ################################################################################";
-
-    let tile_x_count = 80;
-    let tile_y_count = tilemap.len() / tile_x_count;
-
-    for y in 0..tile_y_count {
-        for x in 0..tile_x_count {
-
-            let tile_centre_offset = Vec3::new(TILE_SIZE, TILE_SIZE, 0.0) / 2.0;
-            let pos = Vec3::new(x as f32, y as f32, 0.0) * TILE_SIZE + tile_centre_offset;
-
-            let tilemap_index = (((tile_y_count - 1) - y) * tile_x_count) + x;
-            let color = color_from_char(tilemap[tilemap_index]);
-
-            /*commands.spawn(MaterialMesh2Bdundle {
-                mesh: meshes
-                    .add(shape::Quad::new(Vec2::new(TILE_SIZE, TILE_SIZE)).into())
-                    .into(),
-                material: materials.add(ColorMaterial::from(color)),
-                transform: Transform::from_translation(pos),
-                ..default()
-            });*/
-        }
-    }
-  */

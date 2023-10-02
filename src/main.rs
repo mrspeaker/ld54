@@ -37,6 +37,16 @@ pub enum GameState {
     InGame,
 }
 
+pub struct Layers;
+impl Layers {
+    pub const MOST_BACK: f32 = 0.0;
+    pub const BACKGROUND: f32 = 25.0;
+    pub const MIDGROUND: f32 = 50.;
+    pub const FOREGROUND: f32 = 75.0;
+    pub const MOST_FRONT: f32 = 100.0;
+    pub const UI: f32 = 150.0;
+}
+
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
