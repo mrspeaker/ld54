@@ -81,18 +81,17 @@ fn find_target(
 ) {
     let (map_size, grid_size, map_type, storage, navmesh, map_transform) = tilemap.single();
     for entity in entity.iter() {
-        let Some(entity_pos) = TilePos::from_world_pos(
-            &entity.1.translation.xy(),
-            map_size,
-            grid_size,
-            map_type
-        ) else {
+        let Some(entity_pos) =
+            TilePos::from_world_pos(&entity.1.translation.xy(), map_size, grid_size, map_type)
+        else {
             continue;
         };
-        for &target in plants.iter().filter_map(|(plant, pos)| Some(pos)) {
+        for &target in plants.iter().filter_map(|(plant, pos)| {
+            println!("Plant in pos {:#?} {:#?}", plant, pos);
+            Some(pos)
+        }) {
             if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
-                commands.entity(entity.0)
-                    .insert(path);
+                commands.entity(entity.0).insert(path);
                 break;
             }
         }
@@ -117,7 +116,8 @@ fn follow_path(
     let delta_time = time.delta_seconds();
     for (entity, mut path, mut transform) in &mut query {
         let target = path.current(grid_size, map_type);
-        let delta = target.sub(transform.translation.xy()).normalize() * delta_time * RUMBLEBEE_SPEED;
+        let delta =
+            target.sub(transform.translation.xy()).normalize() * delta_time * RUMBLEBEE_SPEED;
         transform.translation += delta.extend(0.0);
         if transform.translation.xy().distance(target) < TARGET_EPSILON && !path.step() {
             commands.entity(entity).remove::<Pathfinding>();
@@ -127,7 +127,8 @@ fn follow_path(
 
 fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, With<Bob>)>) {
     for (mut transform, _bob) in &mut pos {
-        transform.translation.y += ((time.elapsed_seconds() + transform.translation.x) * 4.0).sin() * 0.1;
+        transform.translation.y +=
+            ((time.elapsed_seconds() + transform.translation.x) * 4.0).sin() * 0.1;
     }
 }
 
@@ -173,8 +174,9 @@ fn game_setup(
             transform: Transform::from_xyz(
                 window.width() / 2.0,
                 window.height() / 2.0,
-                Layers::BACKGROUND)
-                .with_scale(Vec3::new(1.7, 1.4, 0.0)),
+                Layers::BACKGROUND,
+            )
+            .with_scale(Vec3::new(1.7, 1.4, 0.0)),
             ..default()
         },
         OnGameScreen,
@@ -187,9 +189,14 @@ fn game_setup(
         let bee_pos = Vec3::new(
             rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
             rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
-            Layers::MIDGROUND);
+            Layers::MIDGROUND,
+        );
 
-        let texture = asset_server.load(if i < num_beez / 2 {"img/beep.png"} else { "img/beeb.png" });
+        let texture = asset_server.load(if i < num_beez / 2 {
+            "img/beep.png"
+        } else {
+            "img/beeb.png"
+        });
 
         commands.spawn((
             RumbleBee,
@@ -207,31 +214,34 @@ fn game_setup(
                 end: bee_pos.xy(),
                 done: true,
             },
-            Bob
+            Bob,
         ));
     }
 
     /*commands.spawn((
-        SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            sprite: TextureAtlasSprite::new(animation_indices.first),
-            transform: Transform::from_xyz(window.width() / 2.0, 100.0, 0.1)
-                .with_scale(Vec3::splat(6.0)),
-            ..default()
-        },
-        animation_indices,
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-));*/
+            SpriteSheetBundle {
+                texture_atlas: texture_atlas_handle,
+                sprite: TextureAtlasSprite::new(animation_indices.first),
+                transform: Transform::from_xyz(window.width() / 2.0, 100.0, 0.1)
+                    .with_scale(Vec3::splat(6.0)),
+                ..default()
+            },
+            animation_indices,
+            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+    ));*/
 
-    commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            color: Color::hsl(120., 0.5, 0.2),
-            custom_size: Some(Vec2::new(GAP_LEFT, window.height())),
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::hsl(120., 0.5, 0.2),
+                custom_size: Some(Vec2::new(GAP_LEFT, window.height())),
+                ..default()
+            },
+            transform: Transform::from_xyz(GAP_LEFT / 2.0, window.height() / 2.0, Layers::UI),
             ..default()
         },
-        transform: Transform::from_xyz(GAP_LEFT/2.0, window.height()/2.0, Layers::UI),
-        ..default()
-    }, OnGameScreen));
+        OnGameScreen,
+    ));
 
     commands.insert_resource(GameData { tiles: 1 });
 }
@@ -266,7 +276,7 @@ fn confine_to_window(
     mut ent_q: Query<(&Sprite, &mut Transform), With<RumbleBee>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-        let window: &Window = window_query.get_single().unwrap();
+    let window: &Window = window_query.get_single().unwrap();
 
     for (sprite, mut transform) in &mut ent_q {
         let hw = sprite.custom_size.unwrap_or(Vec2::ONE).x / 2.0;

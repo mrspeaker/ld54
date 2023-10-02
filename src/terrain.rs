@@ -89,19 +89,21 @@ impl Plugin for TerrainPlugin {
     }
 }
 
+#[derive(Debug)]
 enum Faction {
     Green,
     Blue,
     Red,
 }
 
+#[derive(Debug)]
 enum PlantStatus {
     Dead,
     Growing,
     Fruiting,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Plant {
     ptype: Faction,
     status: PlantStatus,
@@ -141,18 +143,8 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     for y in 0..map_size.y {
         for x in 0..map_size.x {
             let tile_pos = TilePos { x, y };
-            let mut tile_entity = commands.spawn(TileBundle {
-                position: tile_pos,
-                tilemap_id: TilemapId(tilemap_entity),
-                texture_index: get_tile_idx(x, y, map_size),
-                ..Default::default()
-            });
-            let _ = match y {
-                0 => tile_entity.insert(Colliding),
-                1 => tile_entity.insert((Colliding, Topsoil)),
-                _ => tile_entity.insert(()),
-            };
-            tile_storage.set(&tile_pos, tile_entity.id());
+            let tile_entity = spawn_tile(&mut commands, tile_pos, get_tile(tile_pos, map_size), tilemap_entity);
+            tile_storage.set(&tile_pos, tile_entity);
         }
     }
 
@@ -195,9 +187,22 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     ));
 }
 
-// fn generate_tile()
+fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: Entity) -> Entity {
+    let tbundle = TileBundle {
+        position,
+        tilemap_id: TilemapId(map_ent),
+        texture_index: TileTextureIndex(tile.texture()),
+        ..Default::default()
+    };
+    match tile {
+        Tile::Dirt { topsoil: true, .. } => commands.spawn((tbundle, Topsoil, Colliding)),
+        Tile::Air | Tile::Unknown => commands.spawn(tbundle),
+        _ => commands.spawn((tbundle, Colliding)),
+    }
+    .id()
+}
 
-fn get_tile_idx(x: u32, y: u32, size: TilemapSize) -> TileTextureIndex {
+fn get_tile(pos: TilePos, size: TilemapSize) -> Tile {
     let tilemap = b"\
     .1.....................\
     .t..............L......\
@@ -218,33 +223,30 @@ fn get_tile_idx(x: u32, y: u32, size: TilemapSize) -> TileTextureIndex {
     // TODO: how to do this nicely?
     let sxu: usize = size.x.try_into().unwrap();
     let syu: usize = size.y.try_into().unwrap();
-    let xu: usize = x.try_into().unwrap();
-    let yu: usize = y.try_into().unwrap();
+    let xu: usize = pos.x.try_into().unwrap();
+    let yu: usize = pos.y.try_into().unwrap();
 
     let ch = tilemap[((syu - yu) - 1) * sxu + xu];
 
-    let idx = match ch {
-        b'#' => (Tile::Dirt {
+    match ch {
+        b'#' => Tile::Dirt {
             style: 1,
             topsoil: true,
-        })
-        .texture(),
-        b'%' => (Tile::Dirt {
+        },
+        b'%' => Tile::Dirt {
             style: 5,
-            topsoil: true,
-        })
-        .texture(),
-        b'X' => (Tile::Rock { style: 0 }).texture(),
-        b'1' => (Tile::Poo { style: 0 }).texture(),
-        b'2' => (Tile::Poo { style: 1 }).texture(),
-        b'a' => (Tile::Egg { style: 0 }).texture(),
-        b'b' => (Tile::Egg { style: 1 }).texture(),
-        b't' => (Tile::Stalk { style: 0 }).texture(),
-        b'L' => (Tile::Leaves { style: 1 }).texture(),
-        b'.' => Tile::Air.texture(),
-        _ => Tile::Unknown.texture(),
-    };
-    TileTextureIndex(u32::from(idx))
+            topsoil: false,
+        },
+        b'X' => Tile::Rock { style: 0 },
+        b'1' => Tile::Poo { style: 0 },
+        b'2' => Tile::Poo { style: 1 },
+        b'a' => Tile::Egg { style: 0 },
+        b'b' => Tile::Egg { style: 1 },
+        b't' => Tile::Stalk { style: 0 },
+        b'L' => Tile::Leaves { style: 1 },
+        b'.' => Tile::Air,
+        _ => Tile::Unknown,
+    }
 }
 
 fn highlight_tile(
