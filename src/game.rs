@@ -161,13 +161,14 @@ fn game_setup(
 
     // Make the beez
     let mut rng = rand::thread_rng();
-    for i in 0..10 {
+    let num_beez = 6;
+    for i in 0..num_beez {
         let bee_pos = Vec3::new(
             rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
             rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
             Layers::MIDGROUND);
 
-        let texture = asset_server.load(if i < 5 {"img/beep.png"} else { "img/beeb.png" });
+        let texture = asset_server.load(if i < num_beez / 2 {"img/beep.png"} else { "img/beeb.png" });
 
         commands.spawn((
             RumbleBee,
@@ -175,7 +176,7 @@ fn game_setup(
                 texture,
                 transform: Transform::from_translation(bee_pos),
                 sprite: Sprite {
-                    custom_size: Some(Vec2::new(32.0, 32.0)),
+                    custom_size: Some(Vec2::new(50.0, 50.0)),
                     ..default()
                 },
                 ..default()
