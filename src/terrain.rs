@@ -196,6 +196,7 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
     };
     match tile {
         Tile::Dirt { topsoil: true, .. } => commands.spawn((tbundle, Topsoil, Colliding)),
+        Tile::Stalk { .. } => commands.spawn((tbundle, Plant { ptype: Faction::Red, status: PlantStatus::Growing })),
         Tile::Air | Tile::Unknown => commands.spawn(tbundle),
         _ => commands.spawn((tbundle, Colliding)),
     }
