@@ -87,10 +87,10 @@ fn find_target(
             continue;
         };
         for &target in plants.iter().filter_map(|(plant, pos)| {
-            println!("Plant in pos {:#?} {:#?}", plant, pos);
             Some(pos)
         }) {
             if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+                println!("found target {path:?}");
                 commands.entity(entity.0).insert(path);
                 break;
             }

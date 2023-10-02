@@ -1,4 +1,4 @@
-use std::mem::MaybeUninit;
+use std::{mem::MaybeUninit, fmt::Debug};
 
 use crate::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
@@ -36,7 +36,7 @@ impl Navmesh {
     #[must_use]
     fn empty_neighbours(&self, pos: TilePos) -> Successors {
         fn try_add(nav: &Navmesh, s: &mut Successors, pos: TilePos) {
-            if nav.solid(pos) {
+            if !nav.solid(pos) {
                 s.push(pos);
             }
         }
@@ -122,6 +122,17 @@ impl Successors {
 impl Drop for Successors {
     fn drop(&mut self) {
         self.clear();
+    }
+}
+impl std::ops::Deref for Successors {
+    type Target = [TilePos];
+    fn deref(&self) -> &Self::Target {
+        unsafe {
+            core::slice::from_raw_parts(
+                self.nodes.as_ptr().cast::<TilePos>(),
+                self.len
+            )
+        }
     }
 }
 impl Iterator for Successors {
