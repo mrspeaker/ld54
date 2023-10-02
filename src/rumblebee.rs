@@ -1,4 +1,4 @@
-use crate::game::OnGameScreen;
+use crate::game::{OnGameScreen, Speed};
 use crate::pathfinding::FollowPath;
 use crate::terrain::{GAP_LEFT, TILE_SIZE};
 use crate::{prelude::*, GameState};
@@ -8,16 +8,14 @@ use rand::Rng;
 
 use crate::Layers;
 
-pub const RUMBLEBEE_SPEED: f32 = 50.0;
+const RUMBLEBEE_SPEED: f32 = 50.0;
 
 pub struct RumblebeePlugin;
 impl Plugin for RumblebeePlugin {
-
     fn build(&self, app: &mut App) {
         app
             .add_systems(OnEnter(GameState::InGame), rumblebee_setup);
     }
-
 }
 
 #[derive(Component)]
@@ -66,6 +64,7 @@ fn rumblebee_setup(
                 end: bee_pos.xy(),
                 done: true,
             },
+            Speed { speed: RUMBLEBEE_SPEED }
         ));
 
 

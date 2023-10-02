@@ -1,5 +1,5 @@
 use crate::pathfinding::{Navmesh, follow_path};
-use crate::rumblebee::{RUMBLEBEE_SPEED, RumbleBee};
+use crate::rumblebee::RumbleBee;
 use crate::terrain::{Plant, GAP_LEFT};
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
@@ -28,6 +28,10 @@ impl Plugin for GamePlugin {
     }
 }
 
+#[derive(Component)]
+pub struct Speed {
+    pub speed: f32,
+}
 
 #[derive(Component)]
 struct Bob;
@@ -153,26 +157,26 @@ struct ArrowKeys;
 fn move_with_keys(
     key_in: Res<Input<KeyCode>>,
     time: Res<Time>,
-    mut query: Query<&mut Transform, With<ArrowKeys>>,
+    mut query: Query<(&mut Transform, &Speed), With<ArrowKeys>>,
 ) {
     let mut dir = Vec3::ZERO;
-    let mut transform = query.single_mut();
-
-    if key_in.pressed(KeyCode::Right) {
-        dir.x += 1.0;
-    }
-    if key_in.pressed(KeyCode::Left) {
-        dir.x -= 1.0;
-    }
-    if key_in.pressed(KeyCode::Up) {
-        dir.y += 1.0;
-    }
-    if key_in.pressed(KeyCode::Down) {
-        dir.y -= 1.0;
-    }
-    if dir.length() > 0.0 {
-        dir = dir.normalize();
-        transform.translation += dir * RUMBLEBEE_SPEED * time.delta_seconds();
+    for (mut transform, speed) in &mut query {
+        if key_in.pressed(KeyCode::Right) {
+            dir.x += 1.0;
+        }
+        if key_in.pressed(KeyCode::Left) {
+            dir.x -= 1.0;
+        }
+        if key_in.pressed(KeyCode::Up) {
+            dir.y += 1.0;
+        }
+        if key_in.pressed(KeyCode::Down) {
+            dir.y -= 1.0;
+        }
+        if dir.length() > 0.0 {
+            dir = dir.normalize();
+            transform.translation += dir * speed.speed * time.delta_seconds();
+        }
     }
 }
 

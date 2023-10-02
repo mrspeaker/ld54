@@ -1,8 +1,7 @@
-use std::{mem::MaybeUninit, fmt::Debug};
-use std::ops::Sub;
+use std::{mem::MaybeUninit, fmt::Debug, ops::Sub};
 use bevy::math::swizzles::Vec3Swizzles;
 
-use crate::{prelude::*, rumblebee::{RUMBLEBEE_SPEED, RumbleBee}};
+use crate::{prelude::*, game::Speed};
 use bevy_ecs_tilemap::prelude::*;
 
 #[derive(Component)]
@@ -158,7 +157,7 @@ impl Iterator for Successors {
 pub fn follow_path(
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Pathfinding, &mut Transform), With<RumbleBee>>, // Shouldnt be Rumblebee - any pathfinding.
+    mut query: Query<(Entity, &mut Pathfinding, &mut Transform, &Speed), With<FollowPath>>,
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -171,10 +170,10 @@ pub fn follow_path(
     const TARGET_EPSILON: f32 = 0.02;
     let (map_size, grid_size, map_type, storage, navmesh) = tilemap.single();
     let delta_time = time.delta_seconds();
-    for (entity, mut path, mut transform) in &mut query {
+    for (entity, mut path, mut transform, speed) in &mut query {
         let target = path.current(grid_size, map_type);
         let delta =
-            target.sub(transform.translation.xy()).normalize() * delta_time * RUMBLEBEE_SPEED; //TODO: speed should be on entity!
+            target.sub(transform.translation.xy()).normalize() * delta_time * speed.speed;
         transform.translation += delta.extend(0.0);
         if transform.translation.xy().distance(target) < TARGET_EPSILON && !path.step() {
             commands.entity(entity).remove::<Pathfinding>();
