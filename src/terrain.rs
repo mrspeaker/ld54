@@ -20,7 +20,7 @@ pub const GAP_BOTTOM: f32 = TILE_SIZE * 0.0;
 
 const MAX_PLANT_HEIGHT: u8 = 3;
 
-#[derive(Debug)]
+#[derive(Component, Copy, Clone, Debug)]
 pub enum Tile {
     Air,
     Dirt { topsoil: bool, style: u8 },
@@ -85,7 +85,8 @@ impl Plugin for TerrainPlugin {
                 Update,
                 (highlight_tile.after(update_pointer), spawn_plant)
                     .run_if(in_state(GameState::InGame)),
-            );
+            )
+            .add_systems(Update, (update_tile).run_if(in_state(GameState::InGame)));
     }
 }
 
@@ -155,7 +156,12 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     for y in 0..map_size.y {
         for x in 0..map_size.x {
             let tile_pos = TilePos { x, y };
-            let tile_entity = spawn_tile(&mut commands, tile_pos, get_tile(tile_pos, map_size), tilemap_entity);
+            let tile_entity = spawn_tile(
+                &mut commands,
+                tile_pos,
+                get_tile(tile_pos, map_size),
+                tilemap_entity,
+            );
             tile_storage.set(&tile_pos, tile_entity);
         }
     }
@@ -207,10 +213,17 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
         ..Default::default()
     };
     match tile {
-        Tile::Dirt { topsoil: true, .. } => commands.spawn((tbundle, Topsoil, Colliding)),
-        Tile::Stalk { .. } => commands.spawn((tbundle, Plant { ptype: Faction::Red, status: PlantStatus::Growing })),
-        Tile::Air | Tile::Unknown => commands.spawn(tbundle),
-        _ => commands.spawn((tbundle, Colliding)),
+        Tile::Dirt { topsoil: true, .. } => commands.spawn((tbundle, Topsoil, tile)),
+        Tile::Stalk { .. } => commands.spawn((
+            tbundle,
+            Plant {
+                ptype: Faction::Red,
+                status: PlantStatus::Growing,
+            },
+            tile,
+        )),
+        Tile::Air | Tile::Unknown => commands.spawn((tbundle, tile)),
+        _ => commands.spawn((tbundle, tile)),
     }
     .id()
 }
@@ -276,7 +289,7 @@ fn highlight_tile(
         ),
         Without<Cursor>,
     >,
-    mut tile_q: Query<&mut TileTextureIndex>,
+    mut tile_q: Query<&mut Tile>,
     mut cursor: Query<&mut Transform, With<Cursor>>,
     mut inv: ResMut<Inventory>,
     assets: Res<AssetServer>,
@@ -307,35 +320,36 @@ fn highlight_tile(
                     last_tile.0 = tile_pos;
                 }
 
-                if let Ok(mut t) = tile_q.get_mut(tile_entity) {
+                if let Ok(mut tile) = tile_q.get_mut(tile_entity) {
                     // Update the tile texture and pointer
-                    pointer.set_active_item(Tile::from_texture(t.0));
+                    pointer.set_active_item(*tile);
 
                     // Do some drawing
-                    let tex_idx = pointer.tile.texture();
-                    if pointer.is_down && t.0 != tex_idx {
-                        match (&pointer.tile, t.0) {
+                    if pointer.is_down && tile.texture() != pointer.tile.texture() {
+                        match (pointer.tile, *tile) {
                             // Draw dirt
                             (Tile::Dirt { .. }, _) => {
                                 if inv.dirt > 0 {
                                     inv.dirt -= 1;
-                                    t.0 = tex_idx;
-                                }}
+                                    *tile = pointer.tile;
+                                }
+                            }
                             // Erase
-                            (Tile::Air, tex) if Tile::is_dirt_tex(tex) => {
+                            (Tile::Air, Tile::Dirt {..}) => {
                                 inv.dirt += 1;
-                                t.0 = tex_idx;
-                            },
+                                    *tile = pointer.tile;
+                            }
                             // Draw something else
-                            _ => { t.0 = tex_idx }
+                            _ => *tile = pointer.tile
                         }
+                        screen_print!("Inv: {:?}", inv);
 
                         // Play some noise
                         audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
 
                         match pointer.tile {
                             Tile::Stalk { .. } => {
-                                commands.entity(tile_entity).insert((Colliding, Topsoil));
+                                commands.entity(tile_entity).insert(Topsoil);
                             }
                             _ => (),
                         }
@@ -346,12 +360,30 @@ fn highlight_tile(
     }
 }
 
+fn update_tile(
+    mut commands: Commands,
+    mut tile_query: Query<(Entity, &mut TileTextureIndex, &Tile), Or<(Added<Tile>, Changed<Tile>)>>,
+) {
+    for (ent, mut tile_texture, tile) in &mut tile_query {
+        tile_texture.0 = tile.texture();
+        match tile {
+            Tile::Dirt { topsoil: false, .. } => {
+                commands.entity(ent).remove::<Topsoil>();
+            },
+            Tile::Dirt { topsoil: true, .. } => {
+                commands.entity(ent).insert(Topsoil);
+            }
+            _ => (),
+        };
+    }
+}
+
 fn spawn_plant(
     mut commands: Commands,
     key_in: Res<Input<KeyCode>>,
     mut tilemap_query: Query<(&TileStorage, &TilemapSize)>,
     query: Query<(Entity, &TilePos), With<Topsoil>>,
-    mut tile_query: Query<&mut TileTextureIndex>,
+    tile_query: Query<&Tile>,
 ) {
     for (tile_storage, map_size) in &mut tilemap_query {
         if key_in.pressed(KeyCode::Space) {
@@ -365,11 +397,10 @@ fn spawn_plant(
                     {
                         pos = newpos;
                         if let Some(plant_ent) = tile_storage.get(&pos) {
-                            if let Ok(tile_texture) = tile_query.get_mut(plant_ent) {
-                                if tile_texture.0 == Tile::Air.texture() {
-                                    plant_stack.push(plant_ent);
-                                } else {
-                                    break;
+                            if let Ok(tile) = tile_query.get(plant_ent) {
+                                match tile {
+                                    Tile::Air => plant_stack.push(plant_ent),
+                                    _ => break,
                                 }
                             }
                         }
@@ -382,15 +413,18 @@ fn spawn_plant(
                 }
             }
             if let Some((soil_ent, plant_stack)) = possible_plants.choose(&mut rand::thread_rng()) {
-                commands.entity(*soil_ent).remove::<Topsoil>();
+                commands.entity(*soil_ent).insert(Tile::Dirt {
+                    topsoil: false,
+                    style: 5,
+                });
                 for plant_ent in plant_stack {
-                    commands.entity(*plant_ent).insert(Plant {
-                        ptype: Faction::Red,
-                        status: PlantStatus::Growing,
-                    });
-                    if let Ok(mut tile_texture) = tile_query.get_mut(*plant_ent) {
-                        tile_texture.0 = Tile::Stalk { style: 0 }.texture();
-                    }
+                    commands.entity(*plant_ent).insert((
+                        Plant {
+                            ptype: Faction::Red,
+                            status: PlantStatus::Growing,
+                        },
+                        Tile::Stalk { style: 0 },
+                    ));
                 }
             }
         }
