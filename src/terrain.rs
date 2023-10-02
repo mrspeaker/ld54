@@ -8,6 +8,7 @@ use rand::seq::SliceRandom;
 
 use crate::GameState;
 use crate::Layers;
+use crate::pathfinding::Navmesh;
 
 pub const MAP_COLS: u32 = 23;
 pub const MAP_ROWS: u32 = 15;
@@ -59,7 +60,7 @@ enum PlantStatus {
 }
 
 #[derive(Component)]
-struct Plant {
+pub struct Plant {
     ptype: PlantType,
     status: PlantStatus
 }
@@ -154,6 +155,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
         LastUpdate(0.0),
         TileOffset(1),
         LastTile(TilePos::new(0, 0)),
+        Navmesh::new(map_size.x, map_size.y)
     ));
 
     commands.spawn((

@@ -22,9 +22,10 @@ use std::time::Duration;
 pub mod prelude {
     pub use bevy::prelude::*;
     pub use bevy_debug_text_overlay::screen_print;
+    pub use bevy_ecs_tilemap::prelude::*;
     pub use macros::gene;
 
-    pub use crate::{organism, terrain, FONT};
+    pub use crate::{organism, pathfinding::{Navmesh, Pathfinding}, terrain, FONT};
 }
 
 pub static FONT: OnceLock<HandleId> = OnceLock::new();

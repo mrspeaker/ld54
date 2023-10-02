@@ -1,7 +1,11 @@
-use crate::terrain::{GAP_LEFT, TILE_SIZE};
+use std::ops::Sub;
+
+use crate::pathfinding::Navmesh;
+use crate::terrain::{Plant, GAP_LEFT, TILE_SIZE};
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
+use bevy_ecs_tilemap::tiles::TilePos;
 use rand::Rng;
 
 use crate::Layers;
@@ -15,8 +19,8 @@ impl Plugin for GamePlugin {
             .add_systems(
                 Update,
                 (
-                    assign_waypoints,
-                    walk_path,
+                    follow_path,
+                    find_target,
                     move_bob,
                     mouse_button_events,
                     cursor_position,
@@ -61,45 +65,62 @@ struct GameData {
     tiles: usize,
 }
 
-fn assign_waypoints(
-    mut query: Query<(&mut FollowPath, &Transform)>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
+/// Set the organisms pathfinding to go to the given tile.
+fn find_target(
+    mut commands: Commands,
+    entity: Query<(Entity, &Transform), (Without<Pathfinding>, With<RumbleBee>)>,
+    tilemap: Query<(
+        &TilemapSize,
+        &TilemapGridSize,
+        &TilemapType,
+        &TileStorage,
+        &Navmesh,
+        &Transform,
+    )>,
+    plants: Query<(&Plant, &TilePos)>,
 ) {
-    let window: &Window = window_query.get_single().unwrap();
-
-    let mut rng = rand::thread_rng();
-    for (mut follow_path, _transform) in &mut query {
-        if follow_path.done {
-            let x: f32 = rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT;
-            let y: f32 = rng.gen_range(0.0..=1.0) * (window.height()- TILE_SIZE) + TILE_SIZE;
-
-            follow_path.end = Vec2::new(x, y);
-            follow_path.done = false;
+    let (map_size, grid_size, map_type, storage, navmesh, map_transform) = tilemap.single();
+    for entity in entity.iter() {
+        let Some(entity_pos) = TilePos::from_world_pos(
+            &entity.1.translation.xy(),
+            map_size,
+            grid_size,
+            map_type
+        ) else {
+            continue;
+        };
+        for &target in plants.iter().filter_map(|(plant, pos)| Some(pos)) {
+            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+                commands.entity(entity.0)
+                    .insert(path);
+                break;
+            }
         }
     }
 }
 
-fn walk_path(time: Res<Time>, mut query: Query<(&mut FollowPath, &mut Transform)>) {
-    let dt = time.delta_seconds();
-    for (mut follow_path, mut transform) in &mut query {
-        if !follow_path.done {
-            let p = transform.translation.xy();
-            let end = follow_path.end;
-            let path = end - p;
-
-            let path_length = path.length();
-            let dir = path / path_length;
-            let mut movement_dist = RUMBLEBEE_SPEED * dt;
-
-            if movement_dist >= path_length {
-                movement_dist = path_length;
-                follow_path.done = true;
-            }
-
-            let new_pos = p + (dir * movement_dist);
-
-            transform.translation.x = new_pos.x;
-            transform.translation.y = new_pos.y;
+fn follow_path(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Pathfinding, &mut Transform), With<RumbleBee>>,
+    tilemap: Query<(
+        &TilemapSize,
+        &TilemapGridSize,
+        &TilemapType,
+        &TileStorage,
+        &Navmesh,
+    )>,
+) {
+    /// Distance to the target considered "at" the target.
+    const TARGET_EPSILON: f32 = 0.02;
+    let (map_size, grid_size, map_type, storage, navmesh) = tilemap.single();
+    let delta_time = time.delta_seconds();
+    for (entity, mut path, mut transform) in &mut query {
+        let target = path.current(grid_size, map_type);
+        let delta = target.sub(transform.translation.xy()).normalize() * delta_time * RUMBLEBEE_SPEED;
+        transform.translation += delta.extend(0.0);
+        if transform.translation.xy().distance(target) < TARGET_EPSILON && !path.step() {
+            commands.entity(entity).remove::<Pathfinding>();
         }
     }
 }
