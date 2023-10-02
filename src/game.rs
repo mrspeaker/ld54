@@ -5,6 +5,7 @@ use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
 use bevy_ecs_tilemap::tiles::TilePos;
 use bevy::math::swizzles::Vec3Swizzles;
+use rand::Rng;
 
 use crate::Layers;
 
@@ -75,10 +76,22 @@ fn find_target(
         let Some(entity_pos) =
             TilePos::from_world_pos(&entity.1.translation.xy(), map_size, grid_size, map_type)
         else {
+            // What? Why are some not getting world pos?
+            // Are x and y flipped somewhere?
+            // info!("{:?}", &entity.1.translation);
             continue;
         };
         for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
-            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+            info!("{:?} - {:?}", entity_pos, target);
+            let mut t2 = TilePos { x: target.x, y: target.y };
+            // Go to random spots, just for fun
+            // (don't just stop at the only plant!)
+            if true || entity_pos.x == target.x && entity_pos.y == target.y {
+                let mut rng = rand::thread_rng();
+                t2.x = rng.gen_range(0..map_size.x - 1);
+                t2.y = rng.gen_range(0..map_size.y - 1);
+            }
+            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, t2) {
                 commands.entity(entity.0).insert(path);
                 break;
             }
