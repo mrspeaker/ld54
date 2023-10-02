@@ -89,11 +89,23 @@ impl Plugin for TerrainPlugin {
     }
 }
 
-#[derive(Debug)]
-enum Faction {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Faction {
     Green,
     Blue,
     Red,
+}
+impl Faction {
+    const FACTIONS: &'static [Self] = &[
+        Self::Red,
+        Self::Green,
+        Self::Red,
+    ];
+    #[must_use]
+    pub fn random() -> Self {
+        let mut rng = rand::thread_rng();
+        *Self::FACTIONS.choose(&mut rng).unwrap()
+    }
 }
 
 #[derive(Debug)]
@@ -105,7 +117,7 @@ enum PlantStatus {
 
 #[derive(Component, Debug)]
 pub struct Plant {
-    ptype: Faction,
+    pub ptype: Faction,
     status: PlantStatus,
 }
 

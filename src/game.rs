@@ -46,7 +46,9 @@ struct Bob;
 struct OnGameScreen;
 
 #[derive(Component)]
-struct RumbleBee;
+struct RumbleBee {
+    faction: terrain::Faction,
+}
 
 #[derive(Resource, Deref, DerefMut)]
 struct GameTimer(Timer);
@@ -68,7 +70,7 @@ struct GameData {
 /// Set the organisms pathfinding to go to the given tile.
 fn find_target(
     mut commands: Commands,
-    entity: Query<(Entity, &Transform), (Without<Pathfinding>, With<RumbleBee>)>,
+    entity: Query<(Entity, &Transform, &RumbleBee), Without<Pathfinding>>,
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -86,11 +88,8 @@ fn find_target(
         else {
             continue;
         };
-        for &target in plants.iter().filter_map(|(plant, pos)| {
-            Some(pos)
-        }) {
+        for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
             if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
-                println!("found target {path:?}");
                 commands.entity(entity.0).insert(path);
                 break;
             }
@@ -199,7 +198,9 @@ fn game_setup(
         });
 
         commands.spawn((
-            RumbleBee,
+            RumbleBee {
+                faction: terrain::Faction::random(),
+            },
             SpriteBundle {
                 texture,
                 transform: Transform::from_translation(bee_pos),

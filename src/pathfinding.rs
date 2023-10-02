@@ -81,7 +81,7 @@ impl Pathfinding {
     /// Increment the node that the pathing is at.
     /// Returns true if there was another node.
     pub fn step(&mut self) -> bool {
-        if self.at >= self.path.len() {
+        if self.at + 1 >= self.path.len() {
             return false;
         }
         self.at += 1;
