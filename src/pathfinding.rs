@@ -4,67 +4,58 @@ use crate::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 /// A an entity that can or cannot be navigated through while pathfinding.
-#[derive(Component, Clone, Copy)]
-pub struct Navigatable(bool);
+#[derive(Component)]
+pub struct Navmesh {
+    tiles: Box<[bool]>,
+    width: u32,
+    height: u32,
+}
+impl Navmesh {
+    pub fn new(width: u32, height: u32) -> Self {
+        let mut data = Vec::new();
+        data.resize((width * height) as usize, false);
+        Self {
+            tiles: data.into_boxed_slice(),
+            width,
+            height,
+        }
+    }
+
+    /// Tiles out of bounds are considered solid.
+    pub fn solid(&self, pos: TilePos) -> bool {
+        if pos.x >= self.width || pos.y >= self.height {
+            return true;
+        }
+        self.tiles[pos.x as usize + self.width as usize * pos.y as usize]
+    }
+    pub fn set_solid(&mut self, pos: TilePos, solid: bool) {
+        self.tiles[pos.x as usize + self.width as usize * pos.y as usize] = solid;
+    }
+    pub fn empty_neighbours(&self, pos: TilePos) -> Successors {
+        fn try_add(nav: &Navmesh, s: &mut Successors, pos: TilePos) {
+            if nav.solid(pos) {
+                s.push(pos)
+            }
+        }
+        let mut s = Successors::new();
+        try_add(self, &mut s, TilePos { x: pos.x, y: pos.y - 1 });
+        try_add(self, &mut s, TilePos { x: pos.x - 1, y: pos.y });
+        try_add(self, &mut s, TilePos { x: pos.x + 1, y: pos.y });
+        try_add(self, &mut s, TilePos { x: pos.x, y: pos.y + 1 });
+        s
+    }
+}
 
 #[derive(Debug, Component)]
 pub struct Pathfinding(Vec<TilePos>);
 impl Pathfinding {
     #[must_use]
     pub fn astar(
-        storage: &TileStorage,
-        entities: Query<&Navigatable>,
+        navmesh: &Navmesh,
         from: TilePos,
         to: TilePos,
     ) -> Option<Self> {
-        let succssors = |node: &TilePos| {
-            let mut s = Successors::new();
-            // Filter out non-navigatable nodes
-            #[allow(clippy::identity_op)]
-            [
-                TilePos {
-                    x: node.x - 1,
-                    y: node.y - 1,
-                },
-                TilePos {
-                    x: node.x + 0,
-                    y: node.y - 1,
-                },
-                TilePos {
-                    x: node.x + 1,
-                    y: node.y - 1,
-                },
-                TilePos {
-                    x: node.x - 1,
-                    y: node.y + 0,
-                },
-                TilePos {
-                    x: node.x + 1,
-                    y: node.y + 0,
-                },
-                TilePos {
-                    x: node.x - 1,
-                    y: node.y + 1,
-                },
-                TilePos {
-                    x: node.x + 0,
-                    y: node.y + 1,
-                },
-                TilePos {
-                    x: node.x + 1,
-                    y: node.y + 1,
-                },
-            ]
-            .iter()
-            .filter(|pos| {
-                let Some(entity) = storage.get(pos) else {
-                    return false;
-                };
-                entities.get(entity).map_or(false, |nav| nav.0)
-            })
-            .for_each(|n| s.push(*n));
-            s
-        };
+        let succssors = |pos: &TilePos| navmesh.empty_neighbours(*pos);
         let heuristic = |from: &TilePos| (from.x.abs_diff(to.x) + from.y.abs_diff(to.y)) / 3;
         let success = |node: &_| to.eq(node);
         Some(Self(
@@ -74,7 +65,7 @@ impl Pathfinding {
 }
 
 struct Successors {
-    nodes: [MaybeUninit<TilePos>; 8],
+    nodes: [MaybeUninit<TilePos>; 4],
     len: usize,
     index: usize,
 }
@@ -90,7 +81,7 @@ impl Successors {
     /// # Panics
     /// Panics if the [`Successors`] list is full.
     pub fn push(&mut self, item: TilePos) {
-        assert!(self.len < 8);
+        assert!(self.len < 4);
         self.nodes[self.len].write(item);
         self.len += 1;
     }
