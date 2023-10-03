@@ -1,3 +1,5 @@
+use std::ops::Sub;
+
 use crate::pathfinding::{Navmesh, follow_path};
 use crate::rumblebee::RumbleBee;
 use crate::terrain::{Plant, GAP_LEFT};
@@ -74,11 +76,10 @@ fn find_target(
     let (map_size, grid_size, map_type, storage, navmesh, map_transform) = tilemap.single();
     for entity in entity.iter() {
         let Some(entity_pos) =
-            TilePos::from_world_pos(&entity.1.translation.xy(), map_size, grid_size, map_type)
+            TilePos::from_world_pos(&entity.1.translation.xy().sub(Vec2{x:GAP_LEFT, y: 0.}), map_size, grid_size, map_type)
         else {
             // What? Why are some not getting world pos?
-            // Are x and y flipped somewhere?
-            // info!("{:?}", &entity.1.translation);
+            // info!("{:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
             continue;
         };
         for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
@@ -88,8 +89,8 @@ fn find_target(
             // (don't just stop at the only plant!)
             if true || entity_pos.x == target.x && entity_pos.y == target.y {
                 let mut rng = rand::thread_rng();
-                t2.x = rng.gen_range(0..map_size.x - 1);
-                t2.y = rng.gen_range(0..map_size.y - 1);
+                t2.x = rng.gen_range(0..map_size.x);
+                t2.y = rng.gen_range(0..map_size.y);
             }
             if let Some(path) = Pathfinding::astar(navmesh, entity_pos, t2) {
                 commands.entity(entity.0).insert(path);
@@ -97,6 +98,7 @@ fn find_target(
             }
         }
     }
+
 }
 
 fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, With<Bob>)>) {

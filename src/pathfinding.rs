@@ -1,7 +1,7 @@
-use std::{mem::MaybeUninit, fmt::Debug, ops::Sub};
+use std::{mem::MaybeUninit, fmt::Debug, ops::{Sub, Add}};
 use bevy::math::swizzles::Vec3Swizzles;
 
-use crate::{prelude::*, game::Speed};
+use crate::{prelude::*, game::Speed, terrain::GAP_LEFT};
 use bevy_ecs_tilemap::prelude::*;
 
 #[derive(Component)]
@@ -35,10 +35,10 @@ impl Navmesh {
         if pos.x >= self.width || pos.y >= self.height {
             return true;
         }
-        self.tiles[pos.x as usize + self.width as usize * pos.y as usize]
+        self.tiles[(self.height - 1 - pos.y) as usize * self.width as usize + pos.x as usize]
     }
     pub fn set_solid(&mut self, pos: TilePos, solid: bool) {
-        self.tiles[pos.x as usize + self.width as usize * pos.y as usize] = solid;
+        self.tiles[(self.height - 1 - pos.y) as usize * self.width as usize + pos.x as usize] = solid;
     }
     #[must_use]
     fn empty_neighbours(&self, pos: TilePos) -> Successors {
@@ -171,7 +171,8 @@ pub fn follow_path(
     let (map_size, grid_size, map_type, storage, navmesh) = tilemap.single();
     let delta_time = time.delta_seconds();
     for (entity, mut path, mut transform, speed) in &mut query {
-        let target = path.current(grid_size, map_type);
+        //TODO: get size from entity
+        let target = path.current(grid_size, map_type).add(Vec2 { x: GAP_LEFT + 24., y: 24. });
         let delta =
             target.sub(transform.translation.xy()).normalize() * delta_time * speed.speed;
         transform.translation += delta.extend(0.0);
