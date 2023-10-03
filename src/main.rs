@@ -35,9 +35,9 @@ pub static FONT: OnceLock<HandleId> = OnceLock::new();
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {
+    #[default]
     Logo,
     Splash,
-    #[default]
     InGame,
 }
 

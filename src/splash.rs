@@ -1,4 +1,5 @@
-use bevy::prelude::*;
+use bevy::input::keyboard::KeyboardInput;
+use bevy::{prelude::*, input::ButtonState};
 use bevy::window::PrimaryWindow;
 
 use crate::{despawn_screen, GameState};
@@ -26,7 +27,7 @@ fn splash_setup(
 ) {
     let window: &Window = window_query.get_single().unwrap();
 
-    commands.insert_resource(SplashTimer(Timer::from_seconds(2.0, TimerMode::Once)));
+    commands.insert_resource(SplashTimer(Timer::from_seconds(5.0, TimerMode::Once)));
 
     // Background image
     commands.spawn((
@@ -42,9 +43,9 @@ fn splash_setup(
     // Character sprite
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("img/beep.png"),
+            texture: asset_server.load("img/rumblebees-splash.png"),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 1.0)
-                .with_scale(Vec3::splat(1.0)),
+                .with_scale(Vec3::new(0.34, 0.3, 1.0)),
             ..default()
         },
         OnSplashScreen,
@@ -55,8 +56,23 @@ fn countdown(
     mut game_state: ResMut<NextState<GameState>>,
     time: Res<Time>,
     mut timer: ResMut<SplashTimer>,
+    mut key_evr: EventReader<KeyboardInput>,
+    buttons: Res<Input<MouseButton>>
 ) {
-    if timer.tick(time.delta()).finished() {
+    //if timer.tick(time.delta()).finished() {
+    let mut done = false;
+    for ev in key_evr.iter() {
+        match ev.state {
+            ButtonState ::Released => {
+                done = true;
+            },
+            _ => ()
+        };
+    }
+    for _ in buttons.get_just_released() {
+        done = true;
+    }
+    if done {
         game_state.set(GameState::InGame);
     }
 }
