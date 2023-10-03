@@ -80,13 +80,13 @@ impl Plugin for TerrainPlugin {
         app.add_plugins(TilemapPlugin)
             .init_resource::<Pointer>()
             .add_systems(OnEnter(GameState::InGame), terrain_setup)
-            .add_systems(First, (update_pointer).chain())
-            .add_systems(
-                Update,
-                (highlight_tile.after(update_pointer), spawn_plant)
-                    .run_if(in_state(GameState::InGame)),
-            )
-            .add_systems(Update, (update_tile).run_if(in_state(GameState::InGame)));
+            .add_systems(First, update_pointer)//).chain())//).chain())
+            .add_systems(Update, (
+                highlight_tile,
+                update_tile,
+                spawn_plant,
+            ).run_if(in_state(GameState::InGame)));
+            //.add_systems(Update, ().run_if(in_state(GameState::InGame)));
     }
 }
 
@@ -299,7 +299,6 @@ fn highlight_tile(
         &mut tilemap_q
     {
         let cursor_in_map_pos: Vec2 = {
-            // Extend the cursor_pos vec3 by 0.0 and 1.0
             let pos = Vec4::from((pointer.pos, 0.0, 1.0));
             let cursor_in_map_pos = map_transform.compute_matrix().inverse() * pos;
             cursor_in_map_pos.xy()
@@ -324,28 +323,36 @@ fn highlight_tile(
                     // Update the tile texture and pointer
                     pointer.set_active_item(*tile);
 
-                    // Do some drawing
-                    if pointer.is_down && tile.texture() != pointer.tile.texture() {
+                    let is_same_tex = tile.texture() == pointer.tile.texture();
+                    if pointer.is_down && !is_same_tex {
+                        // Do some drawing
+                        let mut did_draw = false;
                         match (pointer.tile, *tile) {
                             // Draw dirt
                             (Tile::Dirt { .. }, _) => {
                                 if inv.dirt > 0 {
                                     inv.dirt -= 1;
+                                    did_draw = true;
                                     *tile = pointer.tile;
                                 }
                             }
                             // Erase
                             (Tile::Air, Tile::Dirt {..}) => {
                                 inv.dirt += 1;
-                                    *tile = pointer.tile;
+                                did_draw = true;
+                                *tile = pointer.tile;
                             }
                             // Draw something else
-                            _ => *tile = pointer.tile
+                            _ => {
+                                did_draw = true;
+                                *tile = pointer.tile
+                            }
                         }
-                        screen_print!("Inv: {:?}", inv);
 
                         // Play some noise
-                        audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
+                        if did_draw {
+                            audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
+                        }
 
                         match pointer.tile {
                             Tile::Stalk { .. } => {
