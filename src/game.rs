@@ -1,7 +1,7 @@
 use std::ops::Sub;
 
 use crate::pathfinding::{Navmesh, follow_path};
-use crate::rumblebee::RumbleBee;
+use crate::rumblebees::RumbleBee;
 use crate::terrain::{Plant, GAP_LEFT};
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
@@ -83,7 +83,6 @@ fn find_target(
             continue;
         };
         for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
-            info!("{:?} - {:?}", entity_pos, target);
             let mut t2 = TilePos { x: target.x, y: target.y };
             // Go to random spots, just for fun
             // (don't just stop at the only plant!)

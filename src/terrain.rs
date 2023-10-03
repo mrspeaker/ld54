@@ -152,17 +152,23 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     };
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(map_size);
+    let mut navmesh =  Navmesh::new(map_size.x, map_size.y);
 
     for y in 0..map_size.y {
         for x in 0..map_size.x {
             let tile_pos = TilePos { x, y };
+            let tile = get_tile(tile_pos, map_size);
             let tile_entity = spawn_tile(
                 &mut commands,
                 tile_pos,
-                get_tile(tile_pos, map_size),
+                tile,
                 tilemap_entity,
             );
             tile_storage.set(&tile_pos, tile_entity);
+            navmesh.set_solid(tile_pos, match tile {
+                Tile::Air => false,
+                _ => true
+            });
         }
     }
 
@@ -192,7 +198,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
         LastUpdate(0.0),
         TileOffset(1),
         LastTile(TilePos::new(0, 0)),
-        Navmesh::new(map_size.x, map_size.y)
+        navmesh
     ));
 
     commands.spawn((

@@ -12,7 +12,7 @@ pub mod splash;
 pub mod terrain;
 pub mod pointer;
 pub mod inventory;
-pub mod rumblebee;
+pub mod rumblebees;
 
 use std::sync::OnceLock;
 
@@ -84,7 +84,7 @@ fn main() {
             game::GamePlugin,
             terrain::TerrainPlugin,
             inventory::UIPlugin,
-            rumblebee::RumblebeePlugin
+            rumblebees::RumblebeePlugin
         ))
         .run();
 }
