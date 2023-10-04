@@ -137,10 +137,20 @@ fn find_target(
 
 }
 
-fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, With<Bob>)>) {
-    for (mut transform, _bob) in &mut pos {
-        transform.translation.y +=
-            ((time.elapsed_seconds() + transform.translation.x) * 1.0).sin() * 1.;
+fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, Option<&Displacement>, With<Bob>)>) {
+    let mut i = 0.;
+    for (mut transform, displacment, _bob) in &mut pos {
+        let mut do_bob = true;
+        if let Some(displacement) = displacment {
+            if (displacement.0.x).abs() < (displacement.0.y).abs() {
+                do_bob = false;
+            }
+            i+=1.;
+        }
+        if do_bob {
+           transform.translation.y +=
+                    ((time.elapsed_seconds() + i) * 10.0).sin() * 0.4;
+        }
     }
 }
 
