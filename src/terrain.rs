@@ -7,7 +7,11 @@ use rand::seq::SliceRandom;
 
 use crate::GameState;
 use crate::Layers;
-use crate::pathfinding::Navmesh;
+use crate::pathfinding::{
+    Navmesh,
+    update_navmesh_on_tile_change,
+    remove_conflicting_paths_on_tile_change,
+};
 use crate::inventory::Inventory;
 use crate::pointer::{Pointer, update_pointer};
 
@@ -82,9 +86,10 @@ impl Plugin for TerrainPlugin {
             .add_systems(Update, (
                 highlight_tile,
                 update_tile,
+                update_navmesh_on_tile_change.after(update_tile),
+                remove_conflicting_paths_on_tile_change.after(update_tile),
                 spawn_plant,
             ).run_if(in_state(GameState::InGame)));
-            //.add_systems(Update, ().run_if(in_state(GameState::InGame)));
     }
 }
 
@@ -373,15 +378,10 @@ fn highlight_tile(
 
 fn update_tile(
     mut commands: Commands,
-    mut tile_query: Query<(Entity, &mut TileTextureIndex, &Tile, &TilePos), Or<(Added<Tile>, Changed<Tile>)>>,
-    mut navmesh: Query<&mut Navmesh>
+    mut tile_query: Query<(Entity, &mut TileTextureIndex, &Tile), Or<(Added<Tile>, Changed<Tile>)>>,
 ) {
-    for (ent, mut tile_texture, tile, tile_pos) in &mut tile_query {
+    for (ent, mut tile_texture, tile) in &mut tile_query {
         tile_texture.0 = tile.texture();
-        navmesh.get_single_mut().unwrap().set_solid(*tile_pos, match tile {
-            Tile::Air => false,
-            _ => true
-        });
         match tile {
             Tile::Dirt { topsoil: false, .. } => {
                 commands.entity(ent).remove::<Topsoil>();

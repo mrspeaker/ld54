@@ -1,7 +1,7 @@
 use std::{mem::MaybeUninit, fmt::Debug, ops::{Sub, Add}};
 use bevy::math::swizzles::Vec3Swizzles;
 
-use crate::{prelude::*, game::Speed, terrain::GAP_LEFT};
+use crate::{prelude::*, game::Speed, terrain::{GAP_LEFT, Tile}};
 use bevy_ecs_tilemap::prelude::*;
 
 #[derive(Component)]
@@ -178,6 +178,37 @@ pub fn follow_path(
         transform.translation += delta.extend(0.0);
         if transform.translation.xy().distance(target) < TARGET_EPSILON && !path.step() {
             commands.entity(entity).remove::<Pathfinding>();
+        }
+    }
+}
+
+pub fn update_navmesh_on_tile_change(
+    mut tile_query: Query<(&Tile, &TilePos), Or<(Added<Tile>, Changed<Tile>)>>,
+    mut navmesh: Query<&mut Navmesh>
+) {
+    for (tile, tile_pos) in &mut tile_query {
+        navmesh.get_single_mut().unwrap().set_solid(*tile_pos, match tile {
+            Tile::Air => false,
+            _ => true
+        });
+    }
+}
+
+pub fn remove_conflicting_paths_on_tile_change(
+    mut commands: Commands,
+    mut tile_query: Query<(&Tile, &TilePos), Changed<Tile>>,
+    path: Query<(Entity, &mut Pathfinding), With<FollowPath>>,
+) {
+    for (tile, tile_pos) in &mut tile_query {
+        // TODO: why *not* solid?! This runs after update_tile... so should be solid?
+        if !Tile::is_solid(*tile) {
+            // We drawing, invalidate any crossing paths
+            for (ent, path) in path.iter() {
+                if path.path.contains(tile_pos) {
+                    commands.entity(ent).remove::<Pathfinding>();
+                }
+            }
+
         }
     }
 }
