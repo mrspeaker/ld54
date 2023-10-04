@@ -1,6 +1,5 @@
 use bevy::math::Vec4Swizzles;
 use bevy::prelude::*;
-use bevy_debug_text_overlay::screen_print;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
@@ -65,10 +64,9 @@ impl Tile {
             _ => Tile::Unknown,
         }
     }
-    pub fn is_dirt_tex(tex: u32) -> bool {
-        let t = Tile::from_texture(tex);
-        match t {
-            Tile::Dirt { .. } => true,
+    pub fn is_solid(tile: Tile) -> bool {
+        match tile {
+            Tile::Air => true,
             _ => false
         }
     }
@@ -375,10 +373,15 @@ fn highlight_tile(
 
 fn update_tile(
     mut commands: Commands,
-    mut tile_query: Query<(Entity, &mut TileTextureIndex, &Tile), Or<(Added<Tile>, Changed<Tile>)>>,
+    mut tile_query: Query<(Entity, &mut TileTextureIndex, &Tile, &TilePos), Or<(Added<Tile>, Changed<Tile>)>>,
+    mut navmesh: Query<&mut Navmesh>
 ) {
-    for (ent, mut tile_texture, tile) in &mut tile_query {
+    for (ent, mut tile_texture, tile, tile_pos) in &mut tile_query {
         tile_texture.0 = tile.texture();
+        navmesh.get_single_mut().unwrap().set_solid(*tile_pos, match tile {
+            Tile::Air => false,
+            _ => true
+        });
         match tile {
             Tile::Dirt { topsoil: false, .. } => {
                 commands.entity(ent).remove::<Topsoil>();

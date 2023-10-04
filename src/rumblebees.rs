@@ -1,4 +1,4 @@
-use crate::game::{OnGameScreen, Speed};
+use crate::game::{OnGameScreen, Speed, Bob};
 use crate::pathfinding::FollowPath;
 use crate::terrain::{GAP_LEFT, TILE_SIZE};
 use crate::{prelude::*, GameState};
@@ -27,16 +27,32 @@ fn rumblebee_setup(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
+    tilemap: Query<(
+        &TilemapSize,
+        &TilemapGridSize,
+        &Navmesh,
+    )>,
 ){
     let window: &Window = window_query.get_single().unwrap();
+    //let (map_size, grid_size, navmesh) = tilemap.single();
 
     // Make the beez
     let mut rng = rand::thread_rng();
-    let num_beez = 6;
+    let num_beez = 10;
     for i in 0..num_beez {
+        let mut pos = TilePos { x: 0, y : 0 };
+        let mut ok = false;
+        // TODO: get free spot from navmesh. But need to ensure
+        // navmesh loaded before rumblebees somehow.
+        //while !ok {
+            pos.x = 10;//rng.gen_range(0..MAP_COLS);
+            pos.y = 10;//rng.gen_range(0..MAP_ROWS);
+        //    ok = !navmesh.solid(pos);
+        //}
+
         let bee_pos = Vec3::new(
-            rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
-            rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
+            pos.x as f32 * TILE_SIZE + GAP_LEFT,//rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
+            pos.y as f32 * TILE_SIZE, //rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
             Layers::MIDGROUND,
         );
 
@@ -64,7 +80,8 @@ fn rumblebee_setup(
                 end: bee_pos.xy(),
                 done: true,
             },
-            Speed { speed: RUMBLEBEE_SPEED }
+            Speed { speed: RUMBLEBEE_SPEED },
+            Bob
         ));
 
 

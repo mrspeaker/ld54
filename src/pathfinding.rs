@@ -62,8 +62,8 @@ impl Navmesh {
 
 #[derive(Debug, Component)]
 pub struct Pathfinding {
-    path: Vec<TilePos>,
-    at: usize,
+    pub path: Vec<TilePos>,
+    pub at: usize,
 }
 impl Pathfinding {
     #[must_use]
@@ -167,12 +167,12 @@ pub fn follow_path(
     )>,
 ) {
     /// Distance to the target considered "at" the target.
-    const TARGET_EPSILON: f32 = 0.02;
+    const TARGET_EPSILON: f32 = 5.0;
     let (map_size, grid_size, map_type, storage, navmesh) = tilemap.single();
     let delta_time = time.delta_seconds();
     for (entity, mut path, mut transform, speed) in &mut query {
         //TODO: get size from entity
-        let target = path.current(grid_size, map_type).add(Vec2 { x: GAP_LEFT + 24., y: 24. });
+        let target = path.current(grid_size, map_type).add(Vec2 { x: GAP_LEFT + 25., y: 25. });
         let delta =
             target.sub(transform.translation.xy()).normalize() * delta_time * speed.speed;
         transform.translation += delta.extend(0.0);

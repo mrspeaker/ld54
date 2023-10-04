@@ -19,6 +19,8 @@ impl Plugin for GamePlugin {
             .add_systems(
                 Update,
                 (
+                    // dbg_draw_path,
+                    move_bob,
                     follow_path,
                     find_target,
                     mouse_button_events,
@@ -37,7 +39,7 @@ pub struct Speed {
 }
 
 #[derive(Component)]
-struct Bob;
+pub struct Bob;
 
 #[derive(Component)]
 pub struct OnGameScreen;
@@ -59,6 +61,30 @@ struct GameData {
     tiles: usize,
 }
 
+fn dbg_draw_path(
+    mut commands: Commands,
+    query: Query<(Entity, &Pathfinding), Added<Pathfinding>>
+) {
+    for (pf_ent, pf)in query.iter() {
+        for tile_pos in &pf.path {
+            let pos = Vec3::new(
+                tile_pos.x as f32 * 40.0 + GAP_LEFT + 20.0,
+                tile_pos.y as f32 * 40.0 + 20.0,
+                100.0);
+            let dot = commands.spawn(SpriteBundle {
+                sprite: Sprite {
+                    color: Color::rgb(0.7, 0.7, 0.7),
+                    custom_size: Some(Vec2::new(5.0, 5.0)),
+                    ..default()
+                },
+                transform: Transform::from_translation(pos),
+                ..default()
+            }).id();
+            //commands.entity(pf_ent).push_children(&[dot]);
+        }
+    }
+}
+
 /// Set the organisms pathfinding to go to the given tile.
 fn find_target(
     mut commands: Commands,
@@ -75,27 +101,34 @@ fn find_target(
 ) {
     let (map_size, grid_size, map_type, storage, navmesh, map_transform) = tilemap.single();
     for entity in entity.iter() {
+        let pos = &entity.1
+            .translation.xy()
+            // TODO: 25 is bee size / 2. Get from transform!
+            .sub(Vec2 { x:GAP_LEFT + 25.0, y: 25.0 });
         let Some(entity_pos) =
-            TilePos::from_world_pos(&entity.1.translation.xy().sub(Vec2{x:GAP_LEFT, y: 0.}), map_size, grid_size, map_type)
+            TilePos::from_world_pos(pos, map_size, grid_size, map_type)
         else {
-            // What? Why are some not getting world pos?
-            // info!("{:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
+            //Why are some not getting world pos?
+            // info!("Entity outside map {:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
             continue;
         };
-        for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
-            let mut t2 = TilePos { x: target.x, y: target.y };
+        //for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
+        let mut target = TilePos { x: 0, y: 0 }; // { x: target.x, y: target.y };
             // Go to random spots, just for fun
             // (don't just stop at the only plant!)
             if true || entity_pos.x == target.x && entity_pos.y == target.y {
                 let mut rng = rand::thread_rng();
-                t2.x = rng.gen_range(0..map_size.x);
-                t2.y = rng.gen_range(0..map_size.y);
+                let mut ok = false;
+                while !ok {
+                    target.x = rng.gen_range(0..map_size.x);
+                    target.y = rng.gen_range(0..map_size.y);
+                    ok = !navmesh.solid(target);
+                }
             }
-            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, t2) {
-                commands.entity(entity.0).insert(path);
-                break;
-            }
+        if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+            commands.entity(entity.0).insert(path);
         }
+        //}
     }
 
 }
@@ -103,7 +136,7 @@ fn find_target(
 fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, With<Bob>)>) {
     for (mut transform, _bob) in &mut pos {
         transform.translation.y +=
-            ((time.elapsed_seconds() + transform.translation.x) * 4.0).sin() * 0.1;
+            ((time.elapsed_seconds() + transform.translation.x) * 1.0).sin() * 1.;
     }
 }
 
