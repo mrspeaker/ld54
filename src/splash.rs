@@ -54,12 +54,11 @@ fn splash_setup(
 
 fn countdown(
     mut game_state: ResMut<NextState<GameState>>,
-    time: Res<Time>,
-    mut timer: ResMut<SplashTimer>,
     mut key_evr: EventReader<KeyboardInput>,
-    buttons: Res<Input<MouseButton>>
+    buttons: Res<Input<MouseButton>>,
+    touches: Res<Touches>,
 ) {
-    //if timer.tick(time.delta()).finished() {
+    //if timer.tick(time.delta()).finished()
     let mut done = false;
     for ev in key_evr.iter() {
         match ev.state {
@@ -71,6 +70,11 @@ fn countdown(
     }
     for _ in buttons.get_just_released() {
         done = true;
+    }
+    for finger in touches.iter() {
+        if touches.just_pressed(finger.id()) {
+            done = true;
+        }
     }
     if done {
         game_state.set(GameState::InGame);
