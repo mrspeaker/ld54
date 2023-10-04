@@ -25,6 +25,7 @@ impl Plugin for GamePlugin {
                     find_target,
                     mouse_button_events,
                     animate_sprite,
+                    update_sprite,
                     bevy::window::close_on_esc,
                 )
                     .run_if(in_state(GameState::InGame)),
@@ -37,6 +38,9 @@ impl Plugin for GamePlugin {
 pub struct Speed {
     pub speed: f32,
 }
+
+#[derive(Component)]
+pub struct Displacement(pub Vec2);
 
 #[derive(Component)]
 pub struct Bob;
@@ -137,6 +141,18 @@ fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, With<Bob>)>) {
     for (mut transform, _bob) in &mut pos {
         transform.translation.y +=
             ((time.elapsed_seconds() + transform.translation.x) * 1.0).sin() * 1.;
+    }
+}
+
+fn update_sprite(
+    mut query: Query<(&mut Sprite, Option<&Displacement>)>
+) {
+    for (mut sprite, displacement) in query.iter_mut() {
+        if let Some(displacement) = displacement {
+            if displacement.0.x != 0.0 {
+                sprite.flip_x = displacement.0.x < 0.0;
+            }
+        }
     }
 }
 

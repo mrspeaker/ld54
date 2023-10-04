@@ -1,4 +1,4 @@
-use crate::game::{OnGameScreen, Speed, Bob};
+use crate::game::{OnGameScreen, Speed, Bob, Displacement};
 use crate::pathfinding::FollowPath;
 use crate::terrain::{GAP_LEFT, TILE_SIZE};
 use crate::{prelude::*, GameState};
@@ -81,7 +81,8 @@ fn rumblebee_setup(
                 done: true,
             },
             Speed { speed: RUMBLEBEE_SPEED },
-            Bob
+            Bob,
+            Displacement(Vec2 { x: 0., y: 0. })
         ));
 
 

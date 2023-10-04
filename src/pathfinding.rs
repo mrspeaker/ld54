@@ -1,7 +1,7 @@
 use std::{mem::MaybeUninit, fmt::Debug, ops::{Sub, Add}};
 use bevy::math::swizzles::Vec3Swizzles;
 
-use crate::{prelude::*, game::Speed, terrain::{GAP_LEFT, Tile}};
+use crate::{prelude::*, game::{Speed,Displacement}, terrain::{GAP_LEFT, Tile}};
 use bevy_ecs_tilemap::prelude::*;
 
 #[derive(Component)]
@@ -157,7 +157,7 @@ impl Iterator for Successors {
 pub fn follow_path(
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Pathfinding, &mut Transform, &Speed), With<FollowPath>>,
+    mut query: Query<(Entity, &mut Pathfinding, &mut Transform, &Speed, Option<&mut Displacement>), With<FollowPath>>,
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -170,11 +170,16 @@ pub fn follow_path(
     const TARGET_EPSILON: f32 = 5.0;
     let (map_size, grid_size, map_type, storage, navmesh) = tilemap.single();
     let delta_time = time.delta_seconds();
-    for (entity, mut path, mut transform, speed) in &mut query {
+    for (entity, mut path, mut transform, speed, displacement) in &mut query {
         //TODO: get size from entity
         let target = path.current(grid_size, map_type).add(Vec2 { x: GAP_LEFT + 25., y: 25. });
+
         let delta =
             target.sub(transform.translation.xy()).normalize() * delta_time * speed.speed;
+
+        if let Some(mut displacement) = displacement {
+            displacement.0 = delta;
+        }
         transform.translation += delta.extend(0.0);
         if transform.translation.xy().distance(target) < TARGET_EPSILON && !path.step() {
             commands.entity(entity).remove::<Pathfinding>();
