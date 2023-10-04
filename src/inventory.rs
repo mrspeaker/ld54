@@ -1,11 +1,11 @@
 use crate::prelude::*;
 use crate::GameState;
 
-pub const DIRT_AMOUNT:u8 = 10; // umm, why did I make it u8?!
+pub const DIRT_AMOUNT:u32 = 64;
 
 #[derive(Resource, Default, Debug)]
 pub struct Inventory {
-    pub dirt: u8,
+    pub dirt: u32,
 }
 
 pub struct UIPlugin;
@@ -56,7 +56,7 @@ fn update_ui(
     mut ui_dirt: Query<&mut Text, With<UIDirtAmount>>
 ) {
     if inv.is_changed() {
-        let dirts: u8 = inv.dirt;
+        let dirts: u32 = inv.dirt;
         for mut text in &mut ui_dirt {
             text.sections[0].value = format!("{}", dirts);
         }

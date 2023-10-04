@@ -14,7 +14,8 @@ pub struct RumblebeePlugin;
 impl Plugin for RumblebeePlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(OnEnter(GameState::InGame), rumblebee_setup);
+            .add_systems(OnEnter(GameState::InGame), rumblebee_setup)
+            .add_systems(Update, set_unassigned_bees);
     }
 }
 
@@ -23,33 +24,20 @@ pub struct RumbleBee {
     pub faction: terrain::Faction,
 }
 
+#[derive(Component)]
+struct Beenitialized;
+
 fn rumblebee_setup(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
-    tilemap: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &Navmesh,
-    )>,
 ){
     let window: &Window = window_query.get_single().unwrap();
-    //let (map_size, grid_size, navmesh) = tilemap.single();
 
     // Make the beez
-    let mut rng = rand::thread_rng();
     let num_beez = 10;
     for i in 0..num_beez {
-        let mut pos = TilePos { x: 0, y : 0 };
-        let mut ok = false;
-        // TODO: get free spot from navmesh. But need to ensure
-        // navmesh loaded before rumblebees somehow.
-        //while !ok {
-            pos.x = 10;//rng.gen_range(0..MAP_COLS);
-            pos.y = 10;//rng.gen_range(0..MAP_ROWS);
-        //    ok = !navmesh.solid(pos);
-        //}
-
+        let pos = TilePos { x: 0, y : 0 };
         let bee_pos = Vec3::new(
             pos.x as f32 * TILE_SIZE + GAP_LEFT,//rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
             pos.y as f32 * TILE_SIZE, //rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
@@ -82,7 +70,8 @@ fn rumblebee_setup(
             },
             Speed { speed: RUMBLEBEE_SPEED },
             Bob,
-            Displacement(Vec2 { x: 0., y: 0. })
+            Displacement(Vec2 { x: 0., y: 0. }),
+            Beenitialized
         ));
 
 
@@ -114,4 +103,37 @@ fn rumblebee_setup(
 
     }
 
+}
+
+fn set_unassigned_bees(
+    mut commands: Commands,
+    mut ent: Query<(Entity, &mut Transform), (With<RumbleBee>, With<Beenitialized>)>,
+    tilemap: Query<(
+        &TilemapSize,
+        &TilemapGridSize,
+        &TilemapType,
+        &TileStorage,
+        &Navmesh,
+        &Transform,
+    ), Without<RumbleBee>>,
+){
+    //let window: &Window = window_query.get_single().unwrap();
+
+    if !tilemap.is_empty() {
+        let (map_size, grid_size, map_type, storage, navmesh, map_transform) = tilemap.single();
+        for (ent, mut transform) in ent.iter_mut() {
+            let mut target = TilePos { x: 0, y: 0 };
+            let mut rng = rand::thread_rng();
+            let mut ok = false;
+            while !ok {
+                target.x = rng.gen_range(0..map_size.x);
+                target.y = rng.gen_range(0..map_size.y);
+                ok = !navmesh.solid(target);
+            }
+            transform.translation.x = target.x as f32 * grid_size.x - 25.0 + GAP_LEFT;
+            transform.translation.y = target.y as f32 * grid_size.y - 25.0;
+
+            commands.entity(ent).remove::<Beenitialized>();
+        }
+    }
 }
