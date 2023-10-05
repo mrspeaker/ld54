@@ -1,9 +1,9 @@
-use crate::game::{OnGameScreen, Speed, Bob, Displacement};
+use crate::game::{OnGameScreen, Speed, Bob, Displacement, AnimationTimer, AnimationIndices};
 use crate::pathfinding::FollowPath;
 use crate::terrain::{GAP_LEFT, TILE_SIZE};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
 use rand::Rng;
 
 use crate::Layers;
@@ -29,19 +29,17 @@ struct Beenitialized;
 
 fn rumblebee_setup(
     mut commands: Commands,
-    window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
+    mut atlases: ResMut<Assets<TextureAtlas>>,
 ){
-    let window: &Window = window_query.get_single().unwrap();
-
     // Make the beez
     let num_beez = 10;
     for i in 0..num_beez {
         let pos = TilePos { x: 0, y : 0 };
         let bee_z = Layers::MIDGROUND + i as f32;
         let bee_pos = Vec3::new(
-            pos.x as f32 * TILE_SIZE + GAP_LEFT,//rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
-            pos.y as f32 * TILE_SIZE, //rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
+            pos.x as f32 * TILE_SIZE + GAP_LEFT,
+            pos.y as f32 * TILE_SIZE,
             bee_z,
         );
 
@@ -101,43 +99,22 @@ fn rumblebee_setup(
             ..default()
         }).id();
 
-        let wings = commands.spawn(SpriteBundle {
-            texture: asset_server.load("img/Creatures/Wings/wings-up.png"),
-            transform: Transform::from_xyz(0.,2., 0.01),
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(50.0, 50.0)),
+        let wing_handle = asset_server.load("img/wings.png");
+        let wing_atlas = TextureAtlas::from_grid(wing_handle, Vec2::new(80.0, 80.0), 3, 1, None, None);
+        let wing_atlas_handle = atlases.add(wing_atlas);
+        let wing_anim = AnimationIndices { first: 0, last: 2 };
+        let wings = commands.spawn((
+            SpriteSheetBundle {
+                texture_atlas: wing_atlas_handle,
+                sprite: TextureAtlasSprite::new(wing_anim.first),
+                transform: Transform::from_xyz(0.,2., 0.01).with_scale(Vec3::splat(50./80.)),
                 ..default()
             },
-            ..default()
-        }).id();
+            wing_anim,
+            AnimationTimer(Timer::from_seconds(0.03 + (i as f32 * 0.01), TimerMode::Repeating)),
+        )).id();
 
         commands.entity(bee).push_children(&[wings, arm, eyes]);
-
-        /*
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-
-    let texture_handle = asset_server.load("img/gabe-idle-run.png");
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(24.0, 24.0), 7, 1, None, None);
-
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
-    // Use only the subset of sprites in the sheet that make up the run animation
-    let animation_indices = AnimationIndices { first: 1, last: 6 };
-
-
-        commands.spawn((
-            SpriteSheetBundle {
-                texture_atlas: texture_atlas_handle,
-                sprite: TextureAtlasSprite::new(animation_indices.first),
-                transform: Transform::from_xyz(window.width() / 2.0, 100.0, 0.1)
-                    .with_scale(Vec3::splat(6.0)),
-                ..default()
-            },
-            animation_indices,
-            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-        ));
-        */
-
 
     }
 
@@ -149,16 +126,11 @@ fn set_unassigned_bees(
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
-        &TilemapType,
-        &TileStorage,
         &Navmesh,
-        &Transform,
     ), Without<RumbleBee>>,
 ){
-    //let window: &Window = window_query.get_single().unwrap();
-
     if !tilemap.is_empty() {
-        let (map_size, grid_size, map_type, storage, navmesh, map_transform) = tilemap.single();
+        let (map_size, grid_size, navmesh) = tilemap.single();
         for (ent, mut transform) in ent.iter_mut() {
             let mut target = TilePos { x: 0, y: 0 };
             let mut rng = rand::thread_rng();

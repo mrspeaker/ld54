@@ -2,7 +2,7 @@ use std::ops::Sub;
 
 use crate::pathfinding::{Navmesh, follow_path};
 use crate::rumblebees::RumbleBee;
-use crate::terrain::{Plant, GAP_LEFT};
+use crate::terrain::GAP_LEFT;
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
 use bevy_ecs_tilemap::tiles::TilePos;
@@ -52,41 +52,17 @@ pub struct OnGameScreen;
 struct GameTimer(Timer);
 
 #[derive(Component)]
-struct AnimationIndices {
-    first: usize,
-    last: usize,
+pub struct AnimationIndices {
+    pub first: usize,
+    pub last: usize,
 }
 
 #[derive(Component, Deref, DerefMut)]
-struct AnimationTimer(Timer);
+pub struct AnimationTimer(pub Timer);
 
 #[derive(Resource)]
 struct GameData {
     tiles: usize,
-}
-
-fn dbg_draw_path(
-    mut commands: Commands,
-    query: Query<(Entity, &Pathfinding), Added<Pathfinding>>
-) {
-    for (pf_ent, pf)in query.iter() {
-        for tile_pos in &pf.path {
-            let pos = Vec3::new(
-                tile_pos.x as f32 * 40.0 + GAP_LEFT + 20.0,
-                tile_pos.y as f32 * 40.0 + 20.0,
-                100.0);
-            let dot = commands.spawn(SpriteBundle {
-                sprite: Sprite {
-                    color: Color::rgb(0.7, 0.7, 0.7),
-                    custom_size: Some(Vec2::new(5.0, 5.0)),
-                    ..default()
-                },
-                transform: Transform::from_translation(pos),
-                ..default()
-            }).id();
-            //commands.entity(pf_ent).push_children(&[dot]);
-        }
-    }
 }
 
 /// Set the organisms pathfinding to go to the given tile.
@@ -97,13 +73,11 @@ fn find_target(
         &TilemapSize,
         &TilemapGridSize,
         &TilemapType,
-        &TileStorage,
         &Navmesh,
-        &Transform,
     )>,
-    plants: Query<(&Plant, &TilePos)>,
+    //plants: Query<(&Plant, &TilePos)>,
 ) {
-    let (map_size, grid_size, map_type, storage, navmesh, map_transform) = tilemap.single();
+    let (map_size, grid_size, map_type, navmesh) = tilemap.single();
     for entity in entity.iter() {
         let pos = &entity.1
             .translation.xy()
@@ -155,12 +129,11 @@ fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, Option<&Displacemen
 }
 
 fn update_sprite(
-    mut query: Query<(&mut Transform, &mut Sprite, Option<&Displacement>)>
+    mut query: Query<(&mut Transform, Option<&Displacement>)>
 ) {
-    for (mut transform, mut sprite, displacement) in query.iter_mut() {
+    for (mut transform, displacement) in query.iter_mut() {
         if let Some(displacement) = displacement {
             if displacement.0.x != 0.0 {
-                //sprite.flip_x = displacement.0.x < 0.0;
                 transform.scale.x = if displacement.0.x < 0.0 { -1.0 } else { 1.0 };
             }
         }

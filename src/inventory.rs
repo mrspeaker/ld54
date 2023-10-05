@@ -25,7 +25,6 @@ struct UIDirtAmount;
 
 fn ui_setup(
     mut commands: Commands,
-    assets: Res<AssetServer>,
 ) {
     commands.insert_resource(Inventory { dirt: DIRT_AMOUNT });
 

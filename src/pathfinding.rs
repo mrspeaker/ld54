@@ -168,7 +168,7 @@ pub fn follow_path(
 ) {
     /// Distance to the target considered "at" the target.
     const TARGET_EPSILON: f32 = 5.0;
-    let (map_size, grid_size, map_type, storage, navmesh) = tilemap.single();
+    let (_map_size, grid_size, map_type, _storage, _navmesh) = tilemap.single();
     let delta_time = time.delta_seconds();
     for (entity, mut path, mut transform, speed, displacement) in &mut query {
         //TODO: get size from entity
