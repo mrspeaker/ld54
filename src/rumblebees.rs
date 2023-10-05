@@ -45,24 +45,36 @@ fn rumblebee_setup(
         );
 
         let texture = asset_server.load(if i < num_beez / 2 {
-            "img/beep.png"
+            "img/Creatures/Torsos/pink-torso.png"
         } else {
-            "img/beeb.png"
+            "img/Creatures/Torsos/blue-torso.png"
         });
 
-        commands.spawn((
+        let torso = SpriteBundle {
+            texture,
+            transform: Transform::from_translation(bee_pos),
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(50.0, 50.0)),
+                ..default()
+            },
+            ..default()
+        };
+
+        let arm = commands.spawn(SpriteBundle {
+            texture: asset_server.load("img/Creatures/Arms/bent-punch.png"),
+            transform: Transform::from_xyz(0.,0., Layers::MIDGROUND + 0.1),
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(50.0, 50.0)),
+                ..default()
+            },
+            ..default()
+        }).id();
+
+        let bee = commands.spawn((
             RumbleBee {
                 faction: terrain::Faction::random(),
             },
-            SpriteBundle {
-                texture,
-                transform: Transform::from_translation(bee_pos),
-                sprite: Sprite {
-                    custom_size: Some(Vec2::new(50.0, 50.0)),
-                    ..default()
-                },
-                ..default()
-            },
+            torso,
             OnGameScreen,
             FollowPath {
                 end: bee_pos.xy(),
@@ -72,7 +84,11 @@ fn rumblebee_setup(
             Bob,
             Displacement(Vec2 { x: 0., y: 0. }),
             Beenitialized
-        ));
+        )).id();
+
+        commands.entity(bee).push_children(&[arm]);
+
+
 
 
         /*
