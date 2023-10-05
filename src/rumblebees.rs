@@ -38,10 +38,11 @@ fn rumblebee_setup(
     let num_beez = 10;
     for i in 0..num_beez {
         let pos = TilePos { x: 0, y : 0 };
+        let bee_z = Layers::MIDGROUND + i as f32;
         let bee_pos = Vec3::new(
             pos.x as f32 * TILE_SIZE + GAP_LEFT,//rng.gen_range(0.0..=1.0) * (window.width() - GAP_LEFT) + GAP_LEFT,
             pos.y as f32 * TILE_SIZE, //rng.gen_range(0.0..=1.0) * (window.height() - TILE_SIZE) + TILE_SIZE,
-            Layers::MIDGROUND,
+            bee_z,
         );
 
         let texture = asset_server.load(if i < num_beez / 2 {
@@ -60,16 +61,6 @@ fn rumblebee_setup(
             ..default()
         };
 
-        let arm = commands.spawn(SpriteBundle {
-            texture: asset_server.load("img/Creatures/Arms/bent-punch.png"),
-            transform: Transform::from_xyz(0.,0., Layers::MIDGROUND + 0.1),
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(50.0, 50.0)),
-                ..default()
-            },
-            ..default()
-        }).id();
-
         let bee = commands.spawn((
             RumbleBee {
                 faction: terrain::Faction::random(),
@@ -86,10 +77,41 @@ fn rumblebee_setup(
             Beenitialized
         )).id();
 
-        commands.entity(bee).push_children(&[arm]);
+        let arm = commands.spawn(SpriteBundle {
+            texture: asset_server.load("img/Creatures/Arms/bent-arm.png"),
+            transform: Transform::from_xyz(0.,2., 0.01),
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(50.0, 50.0)),
+                ..default()
+            },
+            ..default()
+        }).id();
 
+        let eyes = commands.spawn(SpriteBundle {
+            texture: asset_server.load(match i % 3 {
+                0 => "img/Creatures/Faces/happy-expression.png",
+                1 => "img/Creatures/Faces/angry-expression.png",
+                _ => "img/Creatures/Faces/strained-expression.png",
+            }),
+            transform: Transform::from_xyz(0.,0., 0.01),
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(50.0, 50.0)),
+                ..default()
+            },
+            ..default()
+        }).id();
 
+        let wings = commands.spawn(SpriteBundle {
+            texture: asset_server.load("img/Creatures/Wings/wings-up.png"),
+            transform: Transform::from_xyz(0.,2., 0.01),
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(50.0, 50.0)),
+                ..default()
+            },
+            ..default()
+        }).id();
 
+        commands.entity(bee).push_children(&[wings, arm, eyes]);
 
         /*
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,

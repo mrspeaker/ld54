@@ -155,12 +155,13 @@ fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, Option<&Displacemen
 }
 
 fn update_sprite(
-    mut query: Query<(&mut Sprite, Option<&Displacement>)>
+    mut query: Query<(&mut Transform, &mut Sprite, Option<&Displacement>)>
 ) {
-    for (mut sprite, displacement) in query.iter_mut() {
+    for (mut transform, mut sprite, displacement) in query.iter_mut() {
         if let Some(displacement) = displacement {
             if displacement.0.x != 0.0 {
-                sprite.flip_x = displacement.0.x < 0.0;
+                //sprite.flip_x = displacement.0.x < 0.0;
+                transform.scale.x = if displacement.0.x < 0.0 { -1.0 } else { 1.0 };
             }
         }
     }
