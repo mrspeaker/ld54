@@ -51,7 +51,6 @@ pub fn update_pointer(
     for ev in touch_evr.iter() {
         match ev.phase {
             TouchPhase::Moved => {
-                info!("!!!!!");
                 touch_move = true;
             }
             _ => ()
