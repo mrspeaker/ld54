@@ -1,0 +1,9 @@
+{
+    "name": "Rumblebees",
+    "short_name": "Rumblebees",
+    "start_url": "/",
+    "display": "fullscreen",
+    "background_color": "#000",
+    "description": "LD54: Rumblebees",
+    "icons": []
+}
