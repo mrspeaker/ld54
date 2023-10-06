@@ -2,7 +2,7 @@ use std::ops::Sub;
 
 use crate::pathfinding::{Navmesh, follow_path};
 use crate::rumblebees::RumbleBee;
-use crate::terrain::GAP_LEFT;
+use crate::terrain::{GAP_LEFT, Plant};
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
 use bevy_ecs_tilemap::tiles::TilePos;
@@ -75,7 +75,7 @@ fn find_target(
         &TilemapType,
         &Navmesh,
     )>,
-    //plants: Query<(&Plant, &TilePos)>,
+    plants: Query<(&Plant, &TilePos)>,
 ) {
     let (map_size, grid_size, map_type, navmesh) = tilemap.single();
     for entity in entity.iter() {
@@ -90,8 +90,30 @@ fn find_target(
             // info!("Entity outside map {:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
             continue;
         };
-        //for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
+
+        let targets = plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos));
+        for t in targets {
+            info!("[[[{:?}", t);
+        }
         let mut target = TilePos { x: 0, y: 0 }; // { x: target.x, y: target.y };
+        /*if let Some(first) = &targets.next() {
+            info!("ya {} {}", first.x, first.y);
+            target.x = first.x;
+            target.y = first.y;
+        } else {*/
+            let mut rng = rand::thread_rng();
+            let mut ok = false;
+            while !ok {
+                target.x = rng.gen_range(0..map_size.x);
+                target.y = rng.gen_range(0..map_size.y);
+                ok = !navmesh.solid(target);
+            }
+        //}
+        if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+            commands.entity(entity.0).insert(path);
+        }
+
+/*        for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
             // Go to random spots, just for fun
             // (don't just stop at the only plant!)
             if true || entity_pos.x == target.x && entity_pos.y == target.y {
@@ -102,10 +124,7 @@ fn find_target(
                     target.y = rng.gen_range(0..map_size.y);
                     ok = !navmesh.solid(target);
                 }
-            }
-        if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
-            commands.entity(entity.0).insert(path);
-        }
+            }*/
         //}
     }
 

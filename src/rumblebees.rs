@@ -33,7 +33,7 @@ fn rumblebee_setup(
     mut atlases: ResMut<Assets<TextureAtlas>>,
 ){
     // Make the beez
-    let num_beez = 10;
+    let num_beez = 1;
     for i in 0..num_beez {
         let pos = TilePos { x: 0, y : 0 };
         let bee_z = Layers::MIDGROUND + i as f32;
