@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::terrain::Tile;
+use bevy::input::touch::{Touches,TouchPhase};
 
 #[derive(Resource, Debug)]
 pub struct Pointer {
@@ -42,11 +43,27 @@ pub fn update_pointer(
     camera_q: Query<(&GlobalTransform, &Camera)>,
     mut cursor_moved_events: EventReader<CursorMoved>,
     mut pointer: ResMut<Pointer>,
-    mouse: Res<Input<MouseButton>>
+    mouse: Res<Input<MouseButton>>,
+    touches: Res<Touches>,
+    mut touch_evr: EventReader<TouchInput>,
 ) {
-    pointer.pressed = mouse.just_pressed(MouseButton::Left);
-    pointer.released = mouse.just_released(MouseButton::Left);
-    pointer.is_down = mouse.pressed(MouseButton::Left);
+    let mut touch_move = false;
+    for ev in touch_evr.iter() {
+        match ev.phase {
+            TouchPhase::Moved => {
+                info!("!!!!!");
+                touch_move = true;
+            }
+            _ => ()
+        }
+    }
+
+    pointer.pressed
+        = mouse.just_pressed(MouseButton::Left)
+        || touches.any_just_pressed();
+    pointer.released = mouse.just_released(MouseButton::Left)
+        || touches.any_just_released();
+    pointer.is_down = mouse.pressed(MouseButton::Left) || touch_move;
 
     for cursor_moved in &mut cursor_moved_events {
         for (cam_t, cam) in camera_q.iter() {
