@@ -18,11 +18,15 @@ impl Pointer {
                 Tile::Rock { .. } => tile,
                 _ => Tile::Air,
             };
-            self.pressed = false;
             self.is_down = match self.tile {
                 Tile::Rock { .. } => false,
                 _ => true
-            }
+            };
+
+            // TODO: this is now responsible for clearing pressed,
+            // but shouldn't be. Should be done once per frame (at the beginning)
+            self.pressed = false;
+
         }
     }
 }

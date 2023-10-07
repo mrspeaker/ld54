@@ -138,9 +138,6 @@ struct TileOffset(u16);
 struct LastUpdate(f64);
 
 #[derive(Component)]
-struct LastTile(TilePos);
-
-#[derive(Component)]
 pub struct Cursor;
 
 #[derive(Component)]
@@ -200,7 +197,6 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
         },
         LastUpdate(0.0),
         TileOffset(1),
-        LastTile(TilePos::new(0, 0)),
         navmesh
     ));
 
@@ -287,6 +283,7 @@ fn get_tile(pos: TilePos, size: TilemapSize) -> Tile {
 fn highlight_tile(
     mut commands: Commands,
     mut pointer: ResMut<Pointer>,
+    mut cursor: Query<&mut Transform, With<Cursor>>,
     mut tilemap_q: Query<
         (
             &TilemapSize,
@@ -294,81 +291,56 @@ fn highlight_tile(
             &TilemapType,
             &TileStorage,
             &Transform,
-            &mut LastTile,
         ),
         Without<Cursor>,
     >,
-    mut tile_q: Query<&mut Tile>,
-    mut cursor: Query<&mut Transform, With<Cursor>>,
+    mut tile_q: Query<&mut Tile>, // Every tile? Is that necessary?
     mut inv: ResMut<Inventory>,
     assets: Res<AssetServer>,
     audio: Res<Audio>,
 ) {
-    for (map_size, grid_size, map_type, tile_storage, map_transform, mut last_tile) in
-        &mut tilemap_q
+    let (map_size, grid_size, map_type, tile_storage, map_transform) = tilemap_q.single_mut();
+
+    let pointer_in_map_pos: Vec2 = {
+        let pos = Vec4::from((pointer.pos, 0.0, 1.0));
+        (map_transform.compute_matrix().inverse() * pos).xy()
+    };
+
+    // Get tile entity and tilepos from pointer pos
+    if let Some((tile_entity, tile_pos)) = TilePos::from_world_pos(
+        &pointer_in_map_pos,
+        map_size,
+        grid_size,
+        map_type)
+        .and_then(|tile_pos| {
+            tile_storage.get(&tile_pos)
+                .and_then(|ent| Some((ent, tile_pos)))
+        })
     {
-        let cursor_in_map_pos: Vec2 = {
-            let pos = Vec4::from((pointer.pos, 0.0, 1.0));
-            let cursor_in_map_pos = map_transform.compute_matrix().inverse() * pos;
-            cursor_in_map_pos.xy()
-        };
+        // Upate cursor entity to tile position of pointer
+        let mut cursor_pos = cursor.single_mut();
+        cursor_pos.translation.x = tile_pos.x as f32 * grid_size.x + GAP_LEFT + TILE_SIZE / 2.0;
+        cursor_pos.translation.y = tile_pos.y as f32 * grid_size.y + GAP_BOTTOM + TILE_SIZE / 2.0;
 
-        // world position to tile position.
-        if let Some(tile_pos) =
-            TilePos::from_world_pos(&cursor_in_map_pos, map_size, grid_size, map_type)
-        {
-            let mut cursor_pos = cursor.single_mut();
-            cursor_pos.translation.x = tile_pos.x as f32 * grid_size.x + GAP_LEFT + TILE_SIZE / 2.0;
-            cursor_pos.translation.y =
-                tile_pos.y as f32 * grid_size.y + GAP_BOTTOM + TILE_SIZE / 2.0;
+        if let Ok(mut tile) = tile_q.get_mut(tile_entity) {
+            // Update the tile texture and pointer
+            pointer.set_active_item(*tile);
 
-            if let Some(tile_entity) = tile_storage.get(&tile_pos) {
-                let is_same = tile_pos.x != last_tile.0.x || tile_pos.y != last_tile.0.y;
-                if !is_same {
-                    last_tile.0 = tile_pos;
-                }
+            if pointer.is_down && tile.texture() != pointer.tile.texture() {
+                let (did_draw, dirts) = draw_tile(&pointer.tile, &tile, inv.dirt);
+                if did_draw {
+                    inv.dirt = dirts;
+                    *tile = pointer.tile;
 
-                if let Ok(mut tile) = tile_q.get_mut(tile_entity) {
-                    // Update the tile texture and pointer
-                    pointer.set_active_item(*tile);
+                    // Play some noise
+                    audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
 
-                    let is_same_tex = tile.texture() == pointer.tile.texture();
-                    if pointer.is_down && !is_same_tex {
-                        // Do some drawing
-                        let mut did_draw = false;
-                        match (pointer.tile, *tile) {
-                            // Draw dirt
-                            (Tile::Dirt { .. }, _) => {
-                                if inv.dirt > 0 {
-                                    inv.dirt -= 1;
-                                    did_draw = true;
-                                    *tile = pointer.tile;
-                                }
-                            }
-                            // Erase
-                            (Tile::Air, Tile::Dirt {..}) => {
-                                inv.dirt += 1;
-                                did_draw = true;
-                                *tile = pointer.tile;
-                            }
-                            // Draw something else
-                            _ => {
-                                did_draw = true;
-                                *tile = pointer.tile
-                            }
+                    // Don't think it can ever get here? We can't draw stalks.
+                    match pointer.tile {
+                        Tile::Stalk { .. } => {
+                            commands.entity(tile_entity).insert(Topsoil);
                         }
-
-                        // Play some noise
-                        if did_draw {
-                            audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
-                        }
-
-                        match pointer.tile {
-                            Tile::Stalk { .. } => {
-                                commands.entity(tile_entity).insert(Topsoil);
-                            }
-                            _ => (),
-                        }
+                        _ => (),
                     }
                 }
             }
@@ -393,6 +365,35 @@ fn update_tile(
         };
     }
 }
+
+pub fn draw_tile(
+    pointer_tile: &Tile,
+    tile: &Tile,
+    cur_dirts: u32,
+) -> (bool, u32) {
+    let mut did_draw = false;
+    let mut dirts = cur_dirts;
+    match (pointer_tile, *tile) {
+        // Draw dirt over air
+        (Tile::Dirt { .. }, Tile::Air) => {
+            if dirts > 0 {
+                dirts -= 1;
+                did_draw = true;
+            }
+        }
+        // Draw air over dirt
+        (Tile::Air, Tile::Dirt {..}) => {
+            dirts += 1;
+            did_draw = true;
+        }
+        // No drawing
+        _ => {
+            did_draw = false;
+        }
+    }
+    (did_draw, dirts)
+}
+
 
 fn spawn_plant(
     mut commands: Commands,
