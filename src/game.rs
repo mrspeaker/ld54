@@ -2,7 +2,7 @@ use std::ops::Sub;
 
 use crate::pathfinding::{Navmesh, follow_path};
 use crate::rumblebees::RumbleBee;
-use crate::terrain::{GAP_LEFT, Plant};
+use crate::terrain::{GAP_LEFT, Egg};
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
 use bevy_ecs_tilemap::tiles::TilePos;
@@ -75,7 +75,7 @@ fn find_target(
         &TilemapType,
         &Navmesh,
     )>,
-    plants: Query<(&Plant, &TilePos)>,
+    eggs: Query<(&Egg, &TilePos)>,
 ) {
     let (map_size, grid_size, map_type, navmesh) = tilemap.single();
     for entity in entity.iter() {
@@ -91,13 +91,21 @@ fn find_target(
             continue;
         };
 
-        let targets = plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos));
+
+
+        let mut targets = eggs.iter().filter_map(|(egg, pos)| {
+            (egg.faction == entity.2.faction).then_some((egg, pos))
+        });
         let mut target = TilePos { x: 0, y: 0 }; // { x: target.x, y: target.y };
-        /*if let Some(first) = &targets.next() {
-            info!("ya {} {}", first.x, first.y);
-            target.x = first.x;
-            target.y = first.y;
-        } else {*/
+        // have a target egg - go to it!
+        if let Some(first) = targets.next() {
+            target.x = first.1.x;
+            target.y = first.1.y;
+            //if target.eq(&entity_pos) {
+                //commands.entity(first.0).despawn();
+            //}
+        } else {
+            // No target, just wander aimlessly
             let mut rng = rand::thread_rng();
             let mut ok = false;
             while !ok {
@@ -105,24 +113,12 @@ fn find_target(
                 target.y = rng.gen_range(0..map_size.y);
                 ok = !navmesh.solid(target);
             }
-        //}
+        }
+
         if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
             commands.entity(entity.0).insert(path);
         }
 
-/*        for &target in plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos)) {
-            // Go to random spots, just for fun
-            // (don't just stop at the only plant!)
-            if true || entity_pos.x == target.x && entity_pos.y == target.y {
-                let mut rng = rand::thread_rng();
-                let mut ok = false;
-                while !ok {
-                    target.x = rng.gen_range(0..map_size.x);
-                    target.y = rng.gen_range(0..map_size.y);
-                    ok = !navmesh.solid(target);
-                }
-            }*/
-        //}
     }
 
 }

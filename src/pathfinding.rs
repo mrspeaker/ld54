@@ -193,7 +193,9 @@ pub fn update_navmesh_on_tile_change(
 ) {
     for (tile, tile_pos) in &mut tile_query {
         navmesh.get_single_mut().unwrap().set_solid(*tile_pos, match tile {
+            // TODO: this logic is repeated several times!
             Tile::Air => false,
+            Tile::Egg { .. } => false,
             _ => true
         });
     }

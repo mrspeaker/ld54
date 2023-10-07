@@ -33,7 +33,7 @@ fn rumblebee_setup(
     mut atlases: ResMut<Assets<TextureAtlas>>,
 ){
     // Make the beez
-    let num_beez = 1;
+    let num_beez = 4;
     for i in 0..num_beez {
         let pos = TilePos { x: 0, y : 0 };
         let bee_z = Layers::MIDGROUND + i as f32;
@@ -43,10 +43,11 @@ fn rumblebee_setup(
             bee_z,
         );
 
-        let texture = asset_server.load(if i < num_beez / 2 {
-            "img/Creatures/Torsos/pink-torso.png"
-        } else {
+        let is_blue = i < num_beez / 2;
+        let texture = asset_server.load(if is_blue {
             "img/Creatures/Torsos/blue-torso.png"
+        } else {
+            "img/Creatures/Torsos/pink-torso.png"
         });
 
         let torso = SpriteBundle {
@@ -61,7 +62,10 @@ fn rumblebee_setup(
 
         let bee = commands.spawn((
             RumbleBee {
-                faction: terrain::Faction::random(),
+                faction: match is_blue {
+                    true => terrain::Faction::Blue,
+                    false => terrain::Faction::Red
+                }
             },
             torso,
             OnGameScreen,

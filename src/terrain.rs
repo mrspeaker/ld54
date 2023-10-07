@@ -44,8 +44,8 @@ impl Tile {
             Self::Rock { style } => u32::from(*style) + 11,
             Self::Stalk { style } => u32::from(*style) + 8,
             Self::Leaves { style } => u32::from(*style) + 7,
-            Self::Egg { style } => u32::from(*style) + 48,
-            Self::Poo { style } => u32::from(*style) + 64,
+            Self::Poo { style } => u32::from(*style) + 48,
+            Self::Egg { style } => u32::from(*style) + 64,
             Self::Unknown => 16,
         }
     }
@@ -71,6 +71,7 @@ impl Tile {
     pub fn is_solid(tile: Tile) -> bool {
         match tile {
             Tile::Air => false,
+            Tile::Egg { .. } => false,
             _ => true
         }
     }
@@ -125,6 +126,11 @@ pub struct Plant {
     status: PlantStatus,
 }
 
+#[derive(Component, Debug)]
+pub struct Egg {
+    pub faction: Faction,
+}
+
 #[derive(Component)]
 struct Topsoil;
 
@@ -157,7 +163,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     for y in 0..map_size.y {
         for x in 0..map_size.x {
             let tile_pos = TilePos { x, y };
-            let tile = get_tile(tile_pos, map_size);
+            let tile = get_tile_from_ascii(tile_pos, map_size);
             let tile_entity = spawn_tile(
                 &mut commands,
                 tile_pos,
@@ -167,6 +173,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
             tile_storage.set(&tile_pos, tile_entity);
             navmesh.set_solid(tile_pos, match tile {
                 Tile::Air => false,
+                Tile::Egg { .. } => false,
                 _ => true
             });
         }
@@ -227,13 +234,20 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
             },
             tile,
         )),
+        Tile::Egg { .. } => {
+            info!("Mad a egg {:?}", tile);
+            commands.spawn((
+            tbundle,
+            Egg { faction: Faction::Blue },
+                tile))
+        },
         Tile::Air | Tile::Unknown => commands.spawn((tbundle, tile)),
         _ => commands.spawn((tbundle, tile)),
     }
     .id()
 }
 
-fn get_tile(pos: TilePos, size: TilemapSize) -> Tile {
+fn get_tile_from_ascii(pos: TilePos, size: TilemapSize) -> Tile {
     let tilemap = b"\
     .1.....................\
     .t..............L......\
@@ -269,10 +283,10 @@ fn get_tile(pos: TilePos, size: TilemapSize) -> Tile {
             topsoil: false,
         },
         b'X' => Tile::Rock { style: 0 },
-        b'1' => Tile::Poo { style: 0 },
-        b'2' => Tile::Poo { style: 1 },
-        b'a' => Tile::Egg { style: 0 },
-        b'b' => Tile::Egg { style: 1 },
+        b'1' => Tile::Egg { style: 0 },
+        b'2' => Tile::Egg { style: 1 },
+        b'a' => Tile::Poo { style: 0 },
+        b'b' => Tile::Poo { style: 1 },
         b't' => Tile::Stalk { style: 0 },
         b'L' => Tile::Leaves { style: 1 },
         b'.' => Tile::Air,
