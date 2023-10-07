@@ -205,8 +205,7 @@ pub fn remove_conflicting_paths_on_tile_change(
     path: Query<(Entity, &mut Pathfinding), With<FollowPath>>,
 ) {
     for (tile, tile_pos) in &mut tile_query {
-        // TODO: why *not* solid?! This runs after update_tile... so should be solid?
-        if !Tile::is_solid(*tile) {
+        if Tile::is_solid(*tile) {
             // We drawing, invalidate any crossing paths
             for (ent, path) in path.iter() {
                 if path.path.contains(tile_pos) {

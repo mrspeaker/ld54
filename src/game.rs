@@ -92,9 +92,6 @@ fn find_target(
         };
 
         let targets = plants.iter().filter_map(|(plant, pos)| (plant.ptype == entity.2.faction).then_some(pos));
-        for t in targets {
-            info!("[[[{:?}", t);
-        }
         let mut target = TilePos { x: 0, y: 0 }; // { x: target.x, y: target.y };
         /*if let Some(first) = &targets.next() {
             info!("ya {} {}", first.x, first.y);

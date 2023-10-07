@@ -70,8 +70,8 @@ impl Tile {
     }
     pub fn is_solid(tile: Tile) -> bool {
         match tile {
-            Tile::Air => true,
-            _ => false
+            Tile::Air => false,
+            _ => true
         }
     }
 }
