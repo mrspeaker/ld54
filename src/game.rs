@@ -1,7 +1,7 @@
 use std::ops::Sub;
 
-use crate::pathfinding::{Navmesh, follow_path};
-use crate::rumblebees::RumbleBee;
+use crate::pathfinding::{Navmesh, follow_path, Pathfinding};
+use crate::rumblebees::{RumbleBee, BeeFight, Beenitialized};
 use crate::terrain::{GAP_LEFT, Egg};
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
@@ -23,6 +23,7 @@ impl Plugin for GamePlugin {
                     move_bob,
                     follow_path,
                     find_target,
+                    bee_fight_collisions,
                     mouse_button_events,
                     animate_sprite,
                     update_sprite,
@@ -68,7 +69,9 @@ struct GameData {
 /// Set the organisms pathfinding to go to the given tile.
 fn find_target(
     mut commands: Commands,
-    entity: Query<(Entity, &Transform, &RumbleBee), Without<Pathfinding>>,
+    entity: Query<
+            (Entity, &Transform, &RumbleBee),
+        (Without<Pathfinding>, Without<BeeFight>)>,
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -92,11 +95,11 @@ fn find_target(
         };
 
 
-
         let mut targets = eggs.iter().filter_map(|(egg, pos)| {
             (egg.faction == entity.2.faction).then_some((egg, pos))
         });
-        let mut target = TilePos { x: 0, y: 0 }; // { x: target.x, y: target.y };
+        let mut hasTarget = false;
+        let mut target = TilePos { x: 0, y: 0 };
         // have a target egg - go to it!
         if let Some(first) = targets.next() {
             target.x = first.1.x;
@@ -261,4 +264,39 @@ fn mouse_button_events(
             }
         }
     }
+}
+
+fn bee_fight_collisions(
+    mut commands: Commands,
+    beez: Query<(Entity, &RumbleBee, &Transform), (Without<BeeFight>, Without<Beenitialized>)>
+){
+    /*let entities: Vec<(Entity, &RumbleBee, &Transform)> = beez.iter().map(|(entity, rumblebee, transform)|
+        (entity, rumblebee.clone(), transform.clone())
+    ).collect();
+
+    for i in 0..entities.len() {
+        for j in i+1..entities.len() {
+            let (entity_a, transform_a, sprite_a) = &entities[i];
+            let (entity_b, transform_b, sprite_b) = &entities[j];
+            //check for collision between entity_a and entity_b here
+        }
+    }*/
+
+    for (ent1, bee1, pos1) in beez.iter() {
+        for (ent2, bee2, pos2) in beez.iter() {
+            if bee1.faction == bee2.faction {
+                continue;
+            }
+            if pos1.translation.distance(pos2.translation) < 50.0 {
+                // GET READY TO BRUMBLE!
+                commands.entity(ent1).insert(BeeFight{
+                    opponent: ent2
+                }).remove::<Pathfinding>().remove::<AnimatedTile>();
+            }
+        }
+    }
+}
+
+fn bee_fights() {
+
 }

@@ -132,6 +132,9 @@ pub struct Egg {
 }
 
 #[derive(Component)]
+pub struct TargetEgg;
+
+#[derive(Component)]
 struct Topsoil;
 
 #[derive(Component)]
@@ -160,6 +163,8 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let mut tile_storage = TileStorage::empty(map_size);
     let mut navmesh =  Navmesh::new(map_size.x, map_size.y);
 
+    let mut tiles = Vec::new();
+
     for y in 0..map_size.y {
         for x in 0..map_size.x {
             let tile_pos = TilePos { x, y };
@@ -176,8 +181,13 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
                 Tile::Egg { .. } => false,
                 _ => true
             });
+            tiles.push(tile_entity);
         }
     }
+
+    commands.spawn_empty()
+        .insert(Name::new("Map"))
+        .push_children(&tiles);
 
     let tile_size = TilemapTileSize {
         x: TILE_SIZE,

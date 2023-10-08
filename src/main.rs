@@ -4,6 +4,8 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::needless_pass_by_value)]
 
+
+mod debug;
 pub mod game;
 pub mod logo;
 pub mod organism;
@@ -21,6 +23,7 @@ use bevy::{asset::HandleId, prelude::*};
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_kira_audio::prelude::*;
 use std::time::Duration;
+use debug::DebugPlugin;
 
 pub mod prelude {
     pub use bevy::prelude::*;
@@ -76,6 +79,7 @@ fn main() {
             font_size: 14.0,
             ..default()
         })
+        .add_plugins(DebugPlugin)
         .add_state::<GameState>()
         .add_systems(Startup, setup)
         .add_plugins((

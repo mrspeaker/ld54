@@ -25,7 +25,12 @@ pub struct RumbleBee {
 }
 
 #[derive(Component)]
-struct Beenitialized;
+pub struct Beenitialized;
+
+#[derive(Component)]
+pub struct BeeFight {
+    pub opponent: Entity
+}
 
 fn rumblebee_setup(
     mut commands: Commands,
@@ -33,7 +38,7 @@ fn rumblebee_setup(
     mut atlases: ResMut<Assets<TextureAtlas>>,
 ){
     // Make the beez
-    let num_beez = 4;
+    let num_beez = 8;
     for i in 0..num_beez {
         let pos = TilePos { x: 0, y : 0 };
         let bee_z = Layers::MIDGROUND + i as f32;
