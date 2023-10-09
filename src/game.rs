@@ -270,31 +270,30 @@ fn bee_fight_collisions(
     mut commands: Commands,
     beez: Query<(Entity, &RumbleBee, &Transform), (Without<BeeFight>, Without<Beenitialized>)>
 ){
-    /*let entities: Vec<(Entity, &RumbleBee, &Transform)> = beez.iter().map(|(entity, rumblebee, transform)|
-        (entity, rumblebee.clone(), transform.clone())
+    let entities: Vec<(Entity, &RumbleBee, &Transform)> = beez.iter().map(|(entity, rumblebee, transform)|
+        (entity, rumblebee, transform)
     ).collect();
 
     for i in 0..entities.len() {
         for j in i+1..entities.len() {
-            let (entity_a, transform_a, sprite_a) = &entities[i];
-            let (entity_b, transform_b, sprite_b) = &entities[j];
-            //check for collision between entity_a and entity_b here
-        }
-    }*/
-
-    for (ent1, bee1, pos1) in beez.iter() {
-        for (ent2, bee2, pos2) in beez.iter() {
-            if bee1.faction == bee2.faction {
+            let (ent_a,bee_a,  pos_a) = &entities[i];
+            let (ent_b,bee_b,  pos_b ) = &entities[j];
+            if bee_a.faction == bee_b.faction {
                 continue;
             }
-            if pos1.translation.distance(pos2.translation) < 50.0 {
+            //check for collision between entity_a and entity_b here
+            if pos_a.translation.distance(pos_b.translation) < 50.0 {
                 // GET READY TO BRUMBLE!
-                commands.entity(ent1).insert(BeeFight{
-                    opponent: ent2
-                }).remove::<Pathfinding>().remove::<AnimatedTile>();
+                commands.entity(*ent_a).insert(BeeFight{
+                    opponent: *ent_b
+                }).remove::<Sprite>().remove::<Pathfinding>();
+                commands.entity(*ent_b).insert(BeeFight{
+                    opponent: *ent_a
+                }).remove::<Sprite>().remove::<Pathfinding>();
             }
         }
     }
+
 }
 
 fn bee_fights() {

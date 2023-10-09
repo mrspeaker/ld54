@@ -79,7 +79,7 @@ fn main() {
             font_size: 14.0,
             ..default()
         })
-        .add_plugins(DebugPlugin)
+        //.add_plugins(DebugPlugin)
         .add_state::<GameState>()
         .add_systems(Startup, setup)
         .add_plugins((
