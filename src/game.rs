@@ -20,11 +20,12 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     // dbg_draw_path,
-                    move_bob,
-                    follow_path,
-                    find_target,
-                    bee_fight_collisions,
                     mouse_button_events,
+                    move_bob,
+                    find_target,
+                    follow_path,
+                    bee_fight_collisions,
+                    bee_fight,
                     animate_sprite,
                     update_sprite,
                     bevy::window::close_on_esc,
@@ -98,27 +99,35 @@ fn find_target(
         let mut targets = eggs.iter().filter_map(|(egg, pos)| {
             (egg.faction == entity.2.faction).then_some((egg, pos))
         });
-        let mut hasTarget = false;
-        let mut target = TilePos { x: 0, y: 0 };
+
+        let mut target_path: Option<Pathfinding> = None;
         // have a target egg - go to it!
         if let Some(first) = targets.next() {
-            target.x = first.1.x;
-            target.y = first.1.y;
-            //if target.eq(&entity_pos) {
-                //commands.entity(first.0).despawn();
-            //}
-        } else {
+            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, first.1.clone()) {
+                target_path = Some(path);
+                //commands.entity(entity.0).insert(path);
+            }
+        }
+
+        // No egg target, just wander to random spot
+        if target_path.is_none() {
             // No target, just wander aimlessly
             let mut rng = rand::thread_rng();
             let mut ok = false;
+            let mut target = TilePos { x: 0, y: 0 };
             while !ok {
                 target.x = rng.gen_range(0..map_size.x);
                 target.y = rng.gen_range(0..map_size.y);
                 ok = !navmesh.solid(target);
             }
+
+            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+                target_path = Some(path);
+            }
+
         }
 
-        if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+        if let Some(path) = target_path {
             commands.entity(entity.0).insert(path);
         }
 
@@ -286,16 +295,25 @@ fn bee_fight_collisions(
                 // GET READY TO BRUMBLE!
                 commands.entity(*ent_a).insert(BeeFight{
                     opponent: *ent_b
-                }).remove::<Sprite>().remove::<Pathfinding>();
+                });
                 commands.entity(*ent_b).insert(BeeFight{
                     opponent: *ent_a
-                }).remove::<Sprite>().remove::<Pathfinding>();
+                });
             }
         }
     }
 
 }
 
-fn bee_fights() {
+fn bee_fight(
+    mut commands: Commands,
+    beez: Query<(Entity, &RumbleBee, &Transform), Added<BeeFight>>
+){
+    // Bees be fightin'.
+    for (ent, bee, transform) in beez.iter() {
+        commands.entity(ent)
+            .remove::<Pathfinding>()
+            .remove::<Sprite>();
 
+    }
 }

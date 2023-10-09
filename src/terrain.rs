@@ -244,11 +244,12 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
             },
             tile,
         )),
-        Tile::Egg { .. } => {
-            info!("Mad a egg {:?}", tile);
+        Tile::Egg { style } => {
             commands.spawn((
             tbundle,
-            Egg { faction: Faction::Blue },
+                Egg {
+                    faction: if style == 0 { Faction::Red } else { Faction::Blue }
+                },
                 tile))
         },
         Tile::Air | Tile::Unknown => commands.spawn((tbundle, tile)),
