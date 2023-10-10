@@ -1,7 +1,7 @@
 use std::ops::Sub;
 
 use crate::pathfinding::{Navmesh, follow_path, Pathfinding};
-use crate::rumblebees::{RumbleBee, BeeFight, Beenitialized};
+use crate::rumblebees::{RumbleBee, BeeFight, Beenitialized, Army};
 use crate::terrain::{GAP_LEFT, Egg};
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
@@ -328,13 +328,21 @@ fn bee_fight_collisions(
 
 fn bee_fight(
     mut commands: Commands,
-    beez: Query<(Entity, &RumbleBee, &Transform), Added<BeeFight>>
+    beez: Query<(Entity, &RumbleBee, &Transform, &Children), Added<BeeFight>>,
+    army: Query<Entity, With<Army>>,
 ){
     // Bees be fightin'.
-    for (ent, _bee, _transform) in beez.iter() {
+    for (ent, _bee, _transform, children) in beez.iter() {
         commands.entity(ent)
-            .remove::<Pathfinding>()
-            .remove::<Sprite>();
+            .remove::<Pathfinding>();
+
+        for child in children {
+            if let Ok(army) = army.get(*child) {
+                commands.entity(army)
+                    .insert(AnimationIndices { frames: vec![0, 1], cur: 0 })
+                    .insert(AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)));
+            }
+        }
 
     }
 }

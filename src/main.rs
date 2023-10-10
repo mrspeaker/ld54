@@ -102,6 +102,9 @@ pub struct AssetCol {
     #[asset(texture_atlas(tile_size_x = 80.0, tile_size_y = 80.0, columns = 6, rows = 2))]
     #[asset(path = "img/chars.png")]
     pub chars: Handle<TextureAtlas>,
+    #[asset(texture_atlas(tile_size_x = 102.0, tile_size_y = 80.0, columns = 2, rows = 1))]
+    #[asset(path = "img/arms.png")]
+    pub arms: Handle<TextureAtlas>,
     #[asset(path = "sounds/blip.ogg")]
     blip: Handle<AudioSource>,
 }

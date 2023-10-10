@@ -45,6 +45,9 @@ pub enum BeeState {
     }
 }
 
+#[derive(Component)]
+pub struct Army;
+
 fn rumblebee_setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -97,27 +100,16 @@ fn rumblebee_setup(
             Displacement(Vec2 { x: 0., y: 0. }),
         )).id();
 
-        let arm = commands.spawn(SpriteBundle {
-            texture: asset_server.load("img/Creatures/Arms/bent-arm.png"),
-            transform: Transform::from_xyz(0.,2., 0.01),
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(50.0, 50.0)),
-                ..default()
-            },
-            visibility: Visibility::Visible,
-            ..default()
-        }).id();
 
-        let arm_hit = commands.spawn(SpriteBundle {
-            texture: asset_server.load("img/Creatures/Arms/arm-punch.png"),
-            transform: Transform::from_xyz(15.0,2.1, 0.01),
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(50.0, 50.0)),
+        let arm = commands.spawn((
+            SpriteSheetBundle {
+                texture_atlas: assets.arms.clone(),
+                transform: Transform::from_xyz(0.,0., 0.01).with_scale(Vec3::splat(50.0/80.0)),
+                sprite: TextureAtlasSprite::new(0),
                 ..default()
             },
-            visibility: Visibility::Hidden,
-            ..default()
-        }).id();
+            Army
+        )).id();
 
         let eyes = commands.spawn((
             SpriteSheetBundle {
@@ -141,7 +133,7 @@ fn rumblebee_setup(
             AnimationTimer(Timer::from_seconds(0.03 + (i as f32 * 0.01), TimerMode::Repeating)),
         )).id();
 
-        commands.entity(bee).push_children(&[wings, arm, arm_hit, eyes]);
+        commands.entity(bee).push_children(&[wings, arm, eyes]);
 
     }
 
