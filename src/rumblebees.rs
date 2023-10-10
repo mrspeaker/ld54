@@ -67,7 +67,8 @@ fn rumblebee_setup(
         let is_blue = i < num_beez / 2;
         let bee_sprite = SpriteSheetBundle {
             texture_atlas: assets.chars.clone(),
-            transform: Transform::from_translation(bee_pos).with_scale(Vec3::splat(50.0/80.0)),
+            transform: Transform::from_translation(bee_pos)
+                .with_scale(Vec3::splat(50.0/80.0)),
             sprite: TextureAtlasSprite::new(if is_blue {0} else {1}),
             ..default()
         };
@@ -94,7 +95,7 @@ fn rumblebee_setup(
         let arm = commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: assets.arms.clone(),
-                transform: Transform::from_xyz(0.,0., 0.01).with_scale(Vec3::splat(50.0/80.0)),
+                transform: Transform::from_xyz(0.,0., 0.01), //.with_scale(Vec3::splat(50.0/80.0)),
                 ..default()
             },
             Army
@@ -103,7 +104,7 @@ fn rumblebee_setup(
         let eyes = commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: assets.chars.clone(),
-                transform: Transform::from_xyz(0.,0., 0.01).with_scale(Vec3::splat(50.0/80.0)),
+                transform: Transform::from_xyz(0.,0., 0.01), //.with_scale(Vec3::splat(50.0/80.0)),
                 sprite: TextureAtlasSprite::new(9),
                 ..default()
             },

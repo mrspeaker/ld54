@@ -167,7 +167,7 @@ fn update_sprite(
     for (mut transform, displacement) in query.iter_mut() {
         if let Some(displacement) = displacement {
             if displacement.0.x != 0.0 {
-                transform.scale.x = if displacement.0.x < 0.0 { -1.0 } else { 1.0 };
+                transform.scale.x = transform.scale.x.abs() * if displacement.0.x < 0.0 { -1.0 } else { 1.0 };
             }
         }
     }
