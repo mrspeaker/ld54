@@ -107,28 +107,25 @@ fn rumblebee_setup(
             ..default()
         }).id();
 
-        let eyes = commands.spawn(SpriteBundle {
-            texture: asset_server.load(match i % 3 {
-                0 => "img/Creatures/Faces/happy-expression.png",
-                1 => "img/Creatures/Faces/angry-expression.png",
-                _ => "img/Creatures/Faces/strained-expression.png",
-            }),
-            transform: Transform::from_xyz(0.,0., 0.01),
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(50.0, 50.0)),
+        let eyes = commands.spawn((
+            SpriteSheetBundle {
+                texture_atlas: assets.chars.clone(),
+                transform: Transform::from_xyz(0.,0., 0.01).with_scale(Vec3::splat(50.0/80.0)),
+                sprite: TextureAtlasSprite::new(9),
                 ..default()
             },
-            ..default()
-        }).id();
+            AnimationIndices { frames: vec![9, 10, 11, 10], cur: 0 },
+            AnimationTimer(Timer::from_seconds(1.0 + (i as f32 * 0.1), TimerMode::Repeating)),
+        )).id();
 
         let wings = commands.spawn((
             SpriteSheetBundle {
-                texture_atlas: assets.texs.clone(),
-                sprite: TextureAtlasSprite::new(0),
+                texture_atlas: assets.chars.clone(),
+                sprite: TextureAtlasSprite::new(6),
                 transform: Transform::from_xyz(0.,2., 0.01).with_scale(Vec3::splat(50./80.)),
                 ..default()
             },
-            AnimationIndices { first: 0, last: 2 },
+            AnimationIndices { frames: vec![6, 7, 8, 7], cur: 0 },
             AnimationTimer(Timer::from_seconds(0.03 + (i as f32 * 0.01), TimerMode::Repeating)),
         )).id();
 

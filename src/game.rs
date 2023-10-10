@@ -56,8 +56,8 @@ struct GameTimer(Timer);
 
 #[derive(Component)]
 pub struct AnimationIndices {
-    pub first: usize,
-    pub last: usize,
+    pub frames: Vec<usize>,
+    pub cur: usize
 }
 
 #[derive(Component, Deref, DerefMut)]
@@ -168,19 +168,16 @@ fn update_sprite(
 fn animate_sprite(
     time: Res<Time>,
     mut query: Query<(
-        &AnimationIndices,
+        &mut AnimationIndices,
         &mut AnimationTimer,
         &mut TextureAtlasSprite,
     )>,
 ) {
-    for (indices, mut timer, mut sprite) in &mut query {
+    for (mut indices, mut timer, mut sprite) in &mut query {
         timer.tick(time.delta());
         if timer.just_finished() {
-            sprite.index = if sprite.index == indices.last {
-                indices.first
-            } else {
-                sprite.index + 1
-            };
+            indices.cur = (indices.cur + 1) % indices.frames.len();
+            sprite.index = indices.frames[indices.cur];
         }
     }
 }
