@@ -1,13 +1,7 @@
-use std::ops::Sub;
-
-use crate::pathfinding::{Navmesh, follow_path, Pathfinding};
-use crate::rumblebees::{RumbleBee, BeeFight, Beenitialized, Army};
-use crate::terrain::{GAP_LEFT, Egg};
+use crate::pathfinding::follow_path;
+use crate::terrain::GAP_LEFT;
 use crate::{despawn_screen, prelude::*, GameState};
 use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
-use bevy_ecs_tilemap::tiles::TilePos;
-use bevy::math::swizzles::Vec3Swizzles;
-use rand::Rng;
 
 use crate::Layers;
 
@@ -22,11 +16,7 @@ impl Plugin for GamePlugin {
                     // dbg_draw_path,
                     mouse_button_events,
                     move_bob,
-                    find_target,
                     follow_path,
-                    bee_fight_collisions,
-                    bee_egg_collisions,
-                    bee_fight,
                     animate_sprite,
                     update_sprite,
                     bevy::window::close_on_esc,
@@ -74,74 +64,6 @@ pub struct AnimationTimer(pub Timer);
 #[derive(Resource)]
 struct GameData {
     tiles: usize,
-}
-
-/// Set the organisms pathfinding to go to the given tile.
-fn find_target(
-    mut commands: Commands,
-    entity: Query<
-            (Entity, &Transform, &RumbleBee),
-        (Without<Pathfinding>, Without<BeeFight>)>,
-    tilemap: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &TilemapType,
-        &Navmesh,
-    )>,
-    eggs: Query<(&Egg, &TilePos)>,
-) {
-    let (map_size, grid_size, map_type, navmesh) = tilemap.single();
-    for entity in entity.iter() {
-        let pos = &entity.1
-            .translation.xy()
-            // TODO: 25 is bee size / 2. Get from transform!
-            .sub(Vec2 { x:GAP_LEFT + 25.0, y: 25.0 });
-        let Some(entity_pos) =
-            TilePos::from_world_pos(pos, map_size, grid_size, map_type)
-        else {
-            //Why are some not getting world pos?
-            // info!("Entity outside map {:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
-            continue;
-        };
-
-
-        let mut targets = eggs.iter().filter_map(|(egg, pos)| {
-            (egg.faction == entity.2.faction).then_some((egg, pos))
-        });
-
-        let mut target_path: Option<Pathfinding> = None;
-        // have a target egg - go to it!
-        if let Some(first) = targets.next() {
-            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, first.1.clone()) {
-                target_path = Some(path);
-                //commands.entity(entity.0).insert(path);
-            }
-        }
-
-        // No egg target, just wander to random spot
-        if target_path.is_none() {
-            // No target, just wander aimlessly
-            let mut rng = rand::thread_rng();
-            let mut ok = false;
-            let mut target = TilePos { x: 0, y: 0 };
-            while !ok {
-                target.x = rng.gen_range(0..map_size.x);
-                target.y = rng.gen_range(0..map_size.y);
-                ok = !navmesh.solid(target);
-            }
-
-            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
-                target_path = Some(path);
-            }
-
-        }
-
-        if let Some(path) = target_path {
-            commands.entity(entity.0).insert(path);
-        }
-
-    }
-
 }
 
 fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, Option<&Displacement>, With<Bob>)>) {
@@ -212,10 +134,11 @@ fn game_setup(
         OnGameScreen,
     ));
 
+    // UI bit
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
-                color: Color::hsl(120., 0.5, 0.2),
+                color: Color::hsla(120., 0.5, 0.2, 0.5),
                 custom_size: Some(Vec2::new(GAP_LEFT, window.height())),
                 ..default()
             },
@@ -279,78 +202,3 @@ fn mouse_button_events(
     }
 }
 
-fn bee_egg_collisions(
-    mut commands: Commands,
-    beez: Query<(Entity, &RumbleBee, &Transform)>,
-    eggs: Query<(Entity, &Egg, &TilePos)>,
-    tilemap: Query<&TilemapGridSize>
-){
-    let grid_size = tilemap.single();
-
-    for (_bee_ent, _bee, bee_pos) in beez.iter() {
-        for (egg_ent, _egg, egg_pos) in eggs.iter() {
-            let pos = Vec3 {
-                x: egg_pos.x as f32 * grid_size.x,
-                y: egg_pos.y as f32 * grid_size.y,
-                z: bee_pos.translation.z
-            };
-
-            if bee_pos.translation.distance(pos) < 50.0 {
-                info!("hit a beee egg");
-                commands.entity(egg_ent).remove::<Egg>();
-            }
-        }
-    }
-}
-
-
-fn bee_fight_collisions(
-    mut commands: Commands,
-    beez: Query<(Entity, &RumbleBee, &Transform), (Without<BeeFight>, Without<Beenitialized>)>
-){
-    let entities: Vec<(Entity, &RumbleBee, &Transform)> = beez.iter().map(|(entity, rumblebee, transform)|
-        (entity, rumblebee, transform)
-    ).collect();
-
-    for i in 0..entities.len() {
-        for j in i+1..entities.len() {
-            let (ent_a,bee_a,  pos_a) = &entities[i];
-            let (ent_b,bee_b,  pos_b ) = &entities[j];
-            if bee_a.faction == bee_b.faction {
-                continue;
-            }
-            //check for collision between entity_a and entity_b here
-            if pos_a.translation.distance(pos_b.translation) < 50.0 {
-                // GET READY TO BRUMBLE!
-                commands.entity(*ent_a).insert(BeeFight{
-                    opponent: *ent_b
-                });
-                commands.entity(*ent_b).insert(BeeFight{
-                    opponent: *ent_a
-                });
-            }
-        }
-    }
-
-}
-
-fn bee_fight(
-    mut commands: Commands,
-    beez: Query<(Entity, &RumbleBee, &Transform, &Children), Added<BeeFight>>,
-    army: Query<Entity, With<Army>>,
-){
-    // Bees be fightin'.
-    for (ent, _bee, _transform, children) in beez.iter() {
-        commands.entity(ent)
-            .remove::<Pathfinding>();
-
-        for child in children {
-            if let Ok(army) = army.get(*child) {
-                commands.entity(army)
-                    .insert(AnimationIndices { frames: vec![0, 1], cur: 0 })
-                    .insert(AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)));
-            }
-        }
-
-    }
-}
