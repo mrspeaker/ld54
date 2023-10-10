@@ -104,6 +104,18 @@ fn rumblebee_setup(
                 custom_size: Some(Vec2::new(50.0, 50.0)),
                 ..default()
             },
+            visibility: Visibility::Visible,
+            ..default()
+        }).id();
+
+        let arm_hit = commands.spawn(SpriteBundle {
+            texture: asset_server.load("img/Creatures/Arms/arm-punch.png"),
+            transform: Transform::from_xyz(15.0,2.1, 0.01),
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(50.0, 50.0)),
+                ..default()
+            },
+            visibility: Visibility::Hidden,
             ..default()
         }).id();
 
@@ -129,7 +141,7 @@ fn rumblebee_setup(
             AnimationTimer(Timer::from_seconds(0.03 + (i as f32 * 0.01), TimerMode::Repeating)),
         )).id();
 
-        commands.entity(bee).push_children(&[wings, arm, eyes]);
+        commands.entity(bee).push_children(&[wings, arm, arm_hit, eyes]);
 
     }
 
