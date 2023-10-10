@@ -22,8 +22,9 @@ use bevy::window::{Cursor, CursorIcon, PrimaryWindow};
 use bevy::{asset::HandleId, prelude::*};
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_kira_audio::prelude::*;
+use bevy_asset_loader::prelude::*;
 use std::time::Duration;
-use debug::DebugPlugin;
+// use debug::DebugPlugin;
 
 pub mod prelude {
     pub use bevy::prelude::*;
@@ -39,6 +40,7 @@ pub static FONT: OnceLock<HandleId> = OnceLock::new();
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, States)]
 pub enum GameState {
     #[default]
+    Loading,
     Logo,
     Splash,
     InGame,
@@ -75,6 +77,8 @@ fn main() {
             }),
             AudioPlugin,
         ))
+        .add_loading_state(LoadingState::new(GameState::Loading).continue_to_state(GameState::Splash))
+        .add_collection_to_loading_state::<_, AnimTex>(GameState::Loading)
         .add_plugins(OverlayPlugin {
             font_size: 14.0,
             ..default()
@@ -91,6 +95,13 @@ fn main() {
             rumblebees::RumblebeePlugin
         ))
         .run();
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct AnimTex {
+    #[asset(texture_atlas(tile_size_x = 80.0, tile_size_y = 80.0, columns = 3, rows = 1))]
+    #[asset(path = "img/wings.png")]
+    pub texs: Handle<TextureAtlas>
 }
 
 fn setup(

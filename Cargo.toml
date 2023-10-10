@@ -47,7 +47,7 @@ rand = "0.8.5"
 bevy_kira_audio = { version = "0.16" }
 bevy-debug-text-overlay = "6"
 bevy-inspector-egui = "0.19.0"
-
+bevy_asset_loader = { version = "0.17.0", features = ["2d"] }
 macros = { path = "macros" }
 bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap", features = [ "atlas" ] }
 pathfinding = "4.3.2"

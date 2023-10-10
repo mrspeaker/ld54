@@ -1,4 +1,8 @@
-use crate::game::{OnGameScreen, Speed, Bob, Displacement, AnimationTimer, AnimationIndices};
+use crate::game::{
+    OnGameScreen, Speed, Bob, Displacement, AnimationTimer,
+    AnimationIndices
+};
+use crate::AnimTex;
 use crate::pathfinding::FollowPath;
 use crate::terrain::{GAP_LEFT, TILE_SIZE};
 use crate::{prelude::*, GameState};
@@ -32,10 +36,19 @@ pub struct BeeFight {
     pub opponent: Entity
 }
 
+#[derive(Component)]
+pub enum BeeState {
+    Wander,
+    EggHunt,
+    Fight {
+        opponent: Entity
+    }
+}
+
 fn rumblebee_setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut atlases: ResMut<Assets<TextureAtlas>>,
+    anim_tex: Res<AnimTex>
 ){
     // Make the beez
     let num_beez = 8;
@@ -72,8 +85,9 @@ fn rumblebee_setup(
                     false => terrain::Faction::Red
                 }
             },
-            torso,
+            Beenitialized,
             OnGameScreen,
+            torso,
             FollowPath {
                 end: bee_pos.xy(),
                 done: true,
@@ -81,7 +95,6 @@ fn rumblebee_setup(
             Speed { speed: RUMBLEBEE_SPEED },
             Bob,
             Displacement(Vec2 { x: 0., y: 0. }),
-            Beenitialized
         )).id();
 
         let arm = commands.spawn(SpriteBundle {
@@ -108,18 +121,14 @@ fn rumblebee_setup(
             ..default()
         }).id();
 
-        let wing_handle = asset_server.load("img/wings.png");
-        let wing_atlas = TextureAtlas::from_grid(wing_handle, Vec2::new(80.0, 80.0), 3, 1, None, None);
-        let wing_atlas_handle = atlases.add(wing_atlas);
-        let wing_anim = AnimationIndices { first: 0, last: 2 };
         let wings = commands.spawn((
             SpriteSheetBundle {
-                texture_atlas: wing_atlas_handle,
-                sprite: TextureAtlasSprite::new(wing_anim.first),
+                texture_atlas: anim_tex.texs.clone(),
+                sprite: TextureAtlasSprite::new(0),
                 transform: Transform::from_xyz(0.,2., 0.01).with_scale(Vec3::splat(50./80.)),
                 ..default()
             },
-            wing_anim,
+            AnimationIndices { first: 0, last: 2 },
             AnimationTimer(Timer::from_seconds(0.03 + (i as f32 * 0.01), TimerMode::Repeating)),
         )).id();
 

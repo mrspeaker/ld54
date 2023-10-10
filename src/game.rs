@@ -25,6 +25,7 @@ impl Plugin for GamePlugin {
                     find_target,
                     follow_path,
                     bee_fight_collisions,
+                    bee_egg_collisions,
                     bee_fight,
                     animate_sprite,
                     update_sprite,
@@ -263,17 +264,40 @@ fn mouse_button_events(
 
     for ev in &mut events {
         match ev.state {
-            ButtonState::Pressed => {
-                // screen_print!("Mouse button press: {:?}", ev.button);
-            }
             ButtonState::Released => {
                 if let Some(position) = pos {
                     organism::create_random_organsim(&mut commands, &assets, position);
                 }
             }
+            _ => ()
         }
     }
 }
+
+fn bee_egg_collisions(
+    mut commands: Commands,
+    beez: Query<(Entity, &RumbleBee, &Transform)>,
+    eggs: Query<(Entity, &Egg, &TilePos)>,
+    tilemap: Query<&TilemapGridSize>
+){
+    let grid_size = tilemap.single();
+
+    for (_bee_ent, _bee, bee_pos) in beez.iter() {
+        for (egg_ent, _egg, egg_pos) in eggs.iter() {
+            let pos = Vec3 {
+                x: egg_pos.x as f32 * grid_size.x,
+                y: egg_pos.y as f32 * grid_size.y,
+                z: bee_pos.translation.z
+            };
+
+            if bee_pos.translation.distance(pos) < 50.0 {
+                info!("hit a beee egg");
+                commands.entity(egg_ent).remove::<Egg>();
+            }
+        }
+    }
+}
+
 
 fn bee_fight_collisions(
     mut commands: Commands,
@@ -310,7 +334,7 @@ fn bee_fight(
     beez: Query<(Entity, &RumbleBee, &Transform), Added<BeeFight>>
 ){
     // Bees be fightin'.
-    for (ent, bee, transform) in beez.iter() {
+    for (ent, _bee, _transform) in beez.iter() {
         commands.entity(ent)
             .remove::<Pathfinding>()
             .remove::<Sprite>();
