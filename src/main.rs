@@ -4,7 +4,6 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::needless_pass_by_value)]
 
-
 mod debug;
 pub mod game;
 pub mod logo;
@@ -99,6 +98,10 @@ fn main() {
 
 #[derive(AssetCollection, Resource)]
 pub struct AssetCol {
+    #[asset(path = "img/rumblebees-splash.png")]
+    bg: Handle<Image>,
+    #[asset(path = "img/rumblebees-splash.png")]
+    splash: Handle<Image>,
     #[asset(texture_atlas(tile_size_x = 80.0, tile_size_y = 80.0, columns = 6, rows = 2))]
     #[asset(path = "img/chars.png")]
     pub chars: Handle<TextureAtlas>,

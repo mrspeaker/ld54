@@ -49,6 +49,14 @@ pub struct Displacement(pub Vec2);
 pub struct Bob;
 
 #[derive(Component)]
+pub struct Wander;
+
+#[derive(Component)]
+pub struct Fight {
+    opponent: Entity,
+}
+
+#[derive(Component)]
 pub struct OnGameScreen;
 
 #[derive(Resource, Deref, DerefMut)]

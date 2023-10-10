@@ -1,6 +1,6 @@
 use crate::game::{
     OnGameScreen, Speed, Bob, Displacement, AnimationTimer,
-    AnimationIndices
+    AnimationIndices, Wander
 };
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
@@ -45,12 +45,12 @@ pub enum BeeState {
     }
 }
 
+// Punch arm
 #[derive(Component)]
 pub struct Army;
 
 fn rumblebee_setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     assets: Res<AssetCol>
 ){
     // Make the beez
@@ -65,23 +65,15 @@ fn rumblebee_setup(
         );
 
         let is_blue = i < num_beez / 2;
-        let texture = asset_server.load(if is_blue {
-            "img/Creatures/Torsos/blue-torso.png"
-        } else {
-            "img/Creatures/Torsos/pink-torso.png"
-        });
-
-        let torso = SpriteBundle {
-            texture,
-            transform: Transform::from_translation(bee_pos),
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(50.0, 50.0)),
-                ..default()
-            },
+        let bee_sprite = SpriteSheetBundle {
+            texture_atlas: assets.chars.clone(),
+            transform: Transform::from_translation(bee_pos).with_scale(Vec3::splat(50.0/80.0)),
+            sprite: TextureAtlasSprite::new(if is_blue {0} else {1}),
             ..default()
         };
 
         let bee = commands.spawn((
+            bee_sprite,
             RumbleBee {
                 faction: match is_blue {
                     true => terrain::Faction::Blue,
@@ -90,7 +82,6 @@ fn rumblebee_setup(
             },
             Beenitialized,
             OnGameScreen,
-            torso,
             FollowPath {
                 end: bee_pos.xy(),
                 done: true,
@@ -100,12 +91,10 @@ fn rumblebee_setup(
             Displacement(Vec2 { x: 0., y: 0. }),
         )).id();
 
-
         let arm = commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: assets.arms.clone(),
                 transform: Transform::from_xyz(0.,0., 0.01).with_scale(Vec3::splat(50.0/80.0)),
-                sprite: TextureAtlasSprite::new(0),
                 ..default()
             },
             Army
@@ -133,6 +122,7 @@ fn rumblebee_setup(
             AnimationTimer(Timer::from_seconds(0.03 + (i as f32 * 0.01), TimerMode::Repeating)),
         )).id();
 
+        // should be bee or bee_sprite?
         commands.entity(bee).push_children(&[wings, arm, eyes]);
 
     }
@@ -165,4 +155,12 @@ fn set_unassigned_bees(
             commands.entity(ent).remove::<Beenitialized>();
         }
     }
+}
+
+
+fn wander_start(
+    mut _commands: Commands,
+    mut _ent: Query<Entity, Added<Wander>>
+){
+    // just got wander.
 }

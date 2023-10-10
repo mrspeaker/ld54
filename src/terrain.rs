@@ -133,6 +133,11 @@ pub struct Egg {
 }
 
 #[derive(Component)]
+pub struct FindPos {
+    target: TilePos
+}
+
+#[derive(Component)]
 pub struct TargetEgg;
 
 #[derive(Component)]

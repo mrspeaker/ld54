@@ -2,6 +2,7 @@ use bevy::input::keyboard::KeyboardInput;
 use bevy::{prelude::*, input::ButtonState};
 use bevy::window::PrimaryWindow;
 
+use crate::AssetCol;
 use crate::{despawn_screen, GameState};
 
 pub struct SplashPlugin;
@@ -23,7 +24,7 @@ struct SplashTimer(Timer);
 fn splash_setup(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    asset_server: Res<AssetServer>,
+    assets: Res<AssetCol>,
 ) {
     let window: &Window = window_query.get_single().unwrap();
 
@@ -32,7 +33,7 @@ fn splash_setup(
     // Background image
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("img/bg.png"),
+            texture: assets.bg.clone(),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
                 .with_scale(Vec3::new(1.7, 1.4, 0.0)),
             ..default()
@@ -43,7 +44,7 @@ fn splash_setup(
     // Character sprite
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("img/rumblebees-splash.png"),
+            texture: assets.splash.clone(),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 1.0)
                 .with_scale(Vec3::new(0.34, 0.3, 1.0)),
             ..default()
