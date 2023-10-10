@@ -4,7 +4,7 @@ use crate::game::{
 };
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
-use crate::terrain::{GAP_LEFT, TILE_SIZE, Egg};
+use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::prelude::*;
@@ -192,22 +192,23 @@ fn bee_fight(
 fn bee_egg_collisions(
     mut commands: Commands,
     beez: Query<(Entity, &RumbleBee, &Transform)>,
-    eggs: Query<(Entity, &Egg, &TilePos)>,
+    mut eggs: Query<(Entity, &Egg, &Tile, &TilePos)>,
     tilemap: Query<&TilemapGridSize>
 ){
     let grid_size = tilemap.single();
 
-    for (_bee_ent, _bee, bee_pos) in beez.iter() {
-        for (egg_ent, _egg, egg_pos) in eggs.iter() {
+    for (_bee_ent, bee, bee_pos) in beez.iter() {
+        for (egg_ent, egg, _egg_tile, egg_pos) in eggs.iter_mut() {
             let pos = Vec3 {
-                x: egg_pos.x as f32 * grid_size.x,
-                y: egg_pos.y as f32 * grid_size.y,
+                x: egg_pos.x as f32 * grid_size.x + 25. +GAP_LEFT,
+                y: egg_pos.y as f32 * grid_size.y + 25.,
                 z: bee_pos.translation.z
             };
 
-            if bee_pos.translation.distance(pos) < 50.0 {
-                info!("hit a beee egg");
+            if bee_pos.translation.distance(pos) < 20.0 && bee.faction == egg.faction {
                 commands.entity(egg_ent).remove::<Egg>();
+                // How to change tile?
+                info!("got egg");
             }
         }
     }
