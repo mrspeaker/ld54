@@ -78,7 +78,7 @@ fn main() {
             AudioPlugin,
         ))
         .add_loading_state(LoadingState::new(GameState::Loading).continue_to_state(GameState::Splash))
-        .add_collection_to_loading_state::<_, AnimTex>(GameState::Loading)
+        .add_collection_to_loading_state::<_, AssetCol>(GameState::Loading)
         .add_plugins(OverlayPlugin {
             font_size: 14.0,
             ..default()
@@ -98,10 +98,12 @@ fn main() {
 }
 
 #[derive(AssetCollection, Resource)]
-pub struct AnimTex {
+pub struct AssetCol {
     #[asset(texture_atlas(tile_size_x = 80.0, tile_size_y = 80.0, columns = 3, rows = 1))]
     #[asset(path = "img/wings.png")]
-    pub texs: Handle<TextureAtlas>
+    pub texs: Handle<TextureAtlas>,
+    #[asset(path = "sounds/blip.ogg")]
+    blip: Handle<AudioSource>,
 }
 
 fn setup(

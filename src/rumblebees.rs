@@ -2,7 +2,7 @@ use crate::game::{
     OnGameScreen, Speed, Bob, Displacement, AnimationTimer,
     AnimationIndices
 };
-use crate::AnimTex;
+use crate::AssetCol;
 use crate::pathfinding::FollowPath;
 use crate::terrain::{GAP_LEFT, TILE_SIZE};
 use crate::{prelude::*, GameState};
@@ -48,7 +48,7 @@ pub enum BeeState {
 fn rumblebee_setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    anim_tex: Res<AnimTex>
+    assets: Res<AssetCol>
 ){
     // Make the beez
     let num_beez = 8;
@@ -123,7 +123,7 @@ fn rumblebee_setup(
 
         let wings = commands.spawn((
             SpriteSheetBundle {
-                texture_atlas: anim_tex.texs.clone(),
+                texture_atlas: assets.texs.clone(),
                 sprite: TextureAtlasSprite::new(0),
                 transform: Transform::from_xyz(0.,2., 0.01).with_scale(Vec3::splat(50./80.)),
                 ..default()

@@ -5,6 +5,7 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
 use rand::seq::SliceRandom;
 
+use crate::AssetCol;
 use crate::GameState;
 use crate::Layers;
 use crate::pathfinding::{
@@ -246,7 +247,7 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
         )),
         Tile::Egg { style } => {
             commands.spawn((
-            tbundle,
+                tbundle,
                 Egg {
                     faction: if style == 0 { Faction::Red } else { Faction::Blue }
                 },
@@ -321,7 +322,7 @@ fn highlight_tile(
     >,
     mut tile_q: Query<&mut Tile>, // Every tile? Is that necessary?
     mut inv: ResMut<Inventory>,
-    assets: Res<AssetServer>,
+    assets: Res<AssetCol>,
     audio: Res<Audio>,
 ) {
     let (map_size, grid_size, map_type, tile_storage, map_transform) = tilemap_q.single_mut();
@@ -358,7 +359,7 @@ fn highlight_tile(
                     *tile = pointer.tile;
 
                     // Play some noise
-                    audio.play(assets.load("sounds/blip.ogg")).with_volume(0.3);
+                    audio.play(assets.blip.clone()).with_volume(0.3);
 
                     // Don't think it can ever get here? We can't draw stalks.
                     match pointer.tile {
