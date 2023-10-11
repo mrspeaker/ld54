@@ -362,6 +362,15 @@ fn bee_dead(
             sprite: TextureAtlasSprite::new(37),
             ..default()
         });
+        commands.spawn(SpriteSheetBundle {
+            texture_atlas: assets.tiles.clone(),
+            transform: Transform::from_xyz(
+                pos.translation.x.floor() + 40.0,
+                pos.translation.y.floor(),
+                Layers::MIDGROUND),
+            sprite: TextureAtlasSprite::new(38),
+            ..default()
+        });
         commands.entity(ent).despawn_recursive();
     }
 }
