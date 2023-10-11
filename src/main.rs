@@ -73,6 +73,7 @@ fn main() {
                 }),
                 ..default()
             }),
+            //.set(ImagePlugin::default_nearest()),
             AudioPlugin,
         ))
         .add_loading_state(LoadingState::new(GameState::Loading).continue_to_state(GameState::Splash))
@@ -101,12 +102,19 @@ pub struct AssetCol {
     bg: Handle<Image>,
     #[asset(path = "img/rumblebees-splash.png")]
     splash: Handle<Image>,
+
     #[asset(texture_atlas(tile_size_x = 80.0, tile_size_y = 80.0, columns = 6, rows = 2))]
     #[asset(path = "img/chars.png")]
     pub chars: Handle<TextureAtlas>,
+
     #[asset(texture_atlas(tile_size_x = 102.0, tile_size_y = 80.0, columns = 2, rows = 1))]
     #[asset(path = "img/arms.png")]
     pub arms: Handle<TextureAtlas>,
+
+    #[asset(texture_atlas(tile_size_x = 40.0, tile_size_y = 40.0, columns = 16, rows = 5))]
+    #[asset(path = "img/tiles.png")]
+    pub tiles: Handle<TextureAtlas>,
+
     #[asset(path = "sounds/blip.ogg")]
     blip: Handle<AudioSource>,
     #[asset(path = "sounds/test.ogg")]

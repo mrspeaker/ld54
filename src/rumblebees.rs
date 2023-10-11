@@ -1,6 +1,6 @@
 use crate::game::{
     OnGameScreen, Speed, Bob, Displacement, AnimationTimer,
-    AnimationIndices, Wander, Fight
+    AnimationIndices
 };
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
@@ -10,6 +10,7 @@ use bevy::math::swizzles::Vec3Swizzles;
 use bevy::prelude::*;
 use rand::Rng;
 use std::ops::Sub;
+use std::time::Instant;
 
 use crate::Layers;
 
@@ -28,6 +29,8 @@ impl Plugin for RumblebeePlugin {
                     bee_fight_collisions,
                     bee_egg_collisions,
                     bee_fight,
+                    big_bee_fight,
+                    bee_dead
                 ).run_if(in_state(GameState::InGame)),
             );
     }
@@ -44,6 +47,17 @@ pub struct Beenitialized;
 #[derive(Component)]
 pub struct BeeFight {
     pub opponent: Entity
+}
+
+#[derive(Component)]
+pub struct BeeKilled;
+
+
+#[derive(Component)]
+pub struct BigBeeFight {
+    pub bee1: Entity,
+    pub bee2: Entity,
+    started: Instant
 }
 
 #[derive(Component)]
@@ -215,7 +229,8 @@ fn bee_egg_collisions(
 
 fn bee_fight_collisions(
     mut commands: Commands,
-    beez: Query<(Entity, &RumbleBee, &Transform), (Without<BeeFight>, Without<Beenitialized>)>
+    beez: Query<(Entity, &RumbleBee, &Transform), (Without<BeeFight>, Without<Beenitialized>)>,
+    time: Res<Time>
 ){
     let entities: Vec<(Entity, &RumbleBee, &Transform)> = beez.iter().map(|(entity, rumblebee, transform)|
         (entity, rumblebee, transform)
@@ -236,6 +251,11 @@ fn bee_fight_collisions(
                 });
                 commands.entity(*ent_b).insert(BeeFight{
                     opponent: *ent_a
+                });
+                commands.spawn(BigBeeFight {
+                    bee1: *ent_a,
+                    bee2: *ent_b,
+                    started: time.last_update().unwrap()
                 });
             }
         }
@@ -311,16 +331,37 @@ fn find_target(
 }
 
 
-fn wander_start(
-    mut _commands: Commands,
-    mut _ent: Query<Entity, Added<Wander>>
+fn big_bee_fight(
+    mut commands: Commands,
+    mut ent: Query<(Entity, &mut BigBeeFight)>,
+    time: Res<Time>
 ){
-    // remove fight stuff.
+    for (ent, beefight) in ent.iter_mut() {
+        let t = time.last_update().unwrap() - beefight.started;
+        if t.as_secs() > 5 {
+            commands.entity(beefight.bee1).remove::<BeeFight>();
+            commands.entity(beefight.bee2).insert(BeeKilled);
+            commands.entity(ent).despawn();
+        }
+    }
 }
 
-fn fight_start(
-    mut _commands: Commands,
-    mut _ent: Query<Entity, Added<Fight>>
-){
-    // remove wnader stuff?
+fn bee_dead(
+    mut commands: Commands,
+    mut ent: Query<(Entity, &Transform), With<BeeKilled>>,
+    assets: Res<AssetCol>
+) {
+    for (ent, pos) in ent.iter_mut() {
+        // TODO: needs to set tilemap, not just be a sprite
+        commands.spawn(SpriteSheetBundle {
+            texture_atlas: assets.tiles.clone(),
+            transform: Transform::from_xyz(
+                pos.translation.x.floor(),
+                pos.translation.y.floor(),
+                Layers::MIDGROUND),
+            sprite: TextureAtlasSprite::new(37),
+            ..default()
+        });
+        commands.entity(ent).despawn_recursive();
+    }
 }
