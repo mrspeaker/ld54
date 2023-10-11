@@ -353,7 +353,7 @@ fn bee_dead(
 ) {
     for (ent, pos) in ent.iter_mut() {
         // TODO: needs to set tilemap, not just be a sprite
-        commands.spawn(SpriteSheetBundle {
+        commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
             transform: Transform::from_xyz(
                 pos.translation.x.floor(),
@@ -361,8 +361,8 @@ fn bee_dead(
                 Layers::MIDGROUND),
             sprite: TextureAtlasSprite::new(37),
             ..default()
-        });
-        commands.spawn(SpriteSheetBundle {
+        }, OnGameScreen));
+        commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
             transform: Transform::from_xyz(
                 pos.translation.x.floor() + 40.0,
@@ -370,7 +370,7 @@ fn bee_dead(
                 Layers::MIDGROUND),
             sprite: TextureAtlasSprite::new(38),
             ..default()
-        });
+        }, OnGameScreen));
         commands.entity(ent).despawn_recursive();
     }
 }
