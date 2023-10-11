@@ -8,9 +8,9 @@ use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg, Faction};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::prelude::*;
+use bevy::utils::Instant;
 use rand::Rng;
 use std::ops::Sub;
-use std::time::Instant;
 
 use crate::Layers;
 

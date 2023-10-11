@@ -1,10 +1,9 @@
 use crate::pathfinding::follow_path;
 use crate::pointer::Pointer;
 use crate::terrain::GAP_LEFT;
-use crate::{despawn_screen, prelude::*, GameState, AssetCol};
+use crate::{despawn_screen, GameState, AssetCol};
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_kira_audio::prelude::*;
-use std::time::Duration;
 
 use crate::Layers;
 
@@ -119,7 +118,7 @@ fn game_setup(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
     assets: Res<AssetCol>,
-    audio: Res<Audio>
+    _audio: Res<Audio>
 ) {
     let window: &Window = window_query.get_single().unwrap();
 
