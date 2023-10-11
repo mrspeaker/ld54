@@ -66,7 +66,7 @@ fn rumblebee_setup(
     // Make the beez
     let num_beez = 8;
     for i in 0..num_beez {
-        let pos = TilePos { x: 10, y : 10 };
+        let pos = TilePos { x: 0, y : 0 };
         let bee_z = Layers::MIDGROUND + i as f32;
         let bee_pos = Vec3::new(
             pos.x as f32 * TILE_SIZE + GAP_LEFT,
@@ -248,7 +248,7 @@ fn find_target(
     mut commands: Commands,
     entity: Query<
             (Entity, &Transform, &RumbleBee),
-        (Without<Pathfinding>, Without<BeeFight>)>,
+        (Without<Pathfinding>, Without<BeeFight>, Without<Beenitialized>)>,
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
