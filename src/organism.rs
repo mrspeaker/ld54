@@ -1,14 +1,18 @@
 use rand::Rng;
 
-use crate::prelude::*;
+use crate::{prelude::*, AssetCol};
 
 pub mod gene;
 
-pub fn create_random_organsim(commands: &mut Commands, assets: &Res<AssetServer>, position: Vec2) {
-    let font = assets.get_handle(*FONT.get().unwrap());
+pub fn create_random_organsim(
+    commands: &mut Commands,
+    assets: Res<AssetCol>,
+    position: Vec2)
+{
+    //let font = assets.get_handle(*FONT.get().unwrap());
     commands
         .spawn(Organism::random(position))
-        .with_children(|b| Organism::random_parts(b, font, (100.0, 100.0)));
+        .with_children(|b| Organism::random_parts(b, assets.font.clone(), (100.0, 100.0)));
 }
 
 #[derive(Debug, Bundle)]

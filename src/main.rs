@@ -22,7 +22,6 @@ use bevy::{asset::HandleId, prelude::*};
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_kira_audio::prelude::*;
 use bevy_asset_loader::prelude::*;
-use std::time::Duration;
 // use debug::DebugPlugin;
 
 pub mod prelude {
@@ -98,7 +97,7 @@ fn main() {
 
 #[derive(AssetCollection, Resource)]
 pub struct AssetCol {
-    #[asset(path = "img/rumblebees-splash.png")]
+    #[asset(path = "img/bg.png")]
     bg: Handle<Image>,
     #[asset(path = "img/rumblebees-splash.png")]
     splash: Handle<Image>,
@@ -110,32 +109,26 @@ pub struct AssetCol {
     pub arms: Handle<TextureAtlas>,
     #[asset(path = "sounds/blip.ogg")]
     blip: Handle<AudioSource>,
+    #[asset(path = "sounds/test.ogg")]
+    tune: Handle<AudioSource>,
+    #[asset(path = "font/FredokaOne-Regular.ttf")]
+    font: Handle<Font>,
 }
 
 fn setup(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    audio: Res<Audio>,
-    assets: Res<AssetServer>,
+    //assets: Res<AssetCol>
 ) {
     screen_print!(sec: 3.0, "Run main setup.");
     let window: &Window = window_query.get_single().unwrap();
-    FONT.set(assets.load::<Font, _>("font/FredokaOne-Regular.ttf").id())
-        .unwrap();
+    /*FONT.set(assets.font.id())
+        .unwrap();*/
 
     commands.spawn(Camera2dBundle {
         transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
         ..default()
     });
-
-    audio
-        .play(assets.load("sounds/test.ogg"))
-        .loop_from(0.0)
-        .fade_in(AudioTween::new(
-            Duration::from_secs(2),
-            AudioEasing::OutPowi(2),
-        ))
-        .with_volume(0.1);
 }
 
 fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {

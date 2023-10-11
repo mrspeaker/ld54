@@ -1,3 +1,4 @@
+use crate::AssetCol;
 use crate::game::OnGameScreen;
 use crate::prelude::*;
 use crate::GameState;
@@ -26,6 +27,7 @@ struct UIDirtAmount;
 
 fn ui_setup(
     mut commands: Commands,
+    assets: Res<AssetCol>
 ) {
     commands.insert_resource(Inventory { dirt: DIRT_AMOUNT });
 
@@ -35,7 +37,7 @@ fn ui_setup(
             DIRT_AMOUNT.to_string(),
             TextStyle {
                 // Doesn't update if using custom font on desktop?!
-                //font: assets.load("font/FredokaOne-Regular.ttf"),
+                font: assets.font.clone(),
                 font_size: 50.0,
                 color: Color::WHITE,
                 ..default()

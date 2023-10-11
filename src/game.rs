@@ -1,8 +1,10 @@
 use crate::pathfinding::follow_path;
 use crate::pointer::Pointer;
 use crate::terrain::GAP_LEFT;
-use crate::{despawn_screen, prelude::*, GameState};
+use crate::{despawn_screen, prelude::*, GameState, AssetCol};
 use bevy::{prelude::*, window::PrimaryWindow};
+use bevy_kira_audio::prelude::*;
+use std::time::Duration;
 
 use crate::Layers;
 
@@ -116,14 +118,24 @@ fn animate_sprite(
 fn game_setup(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    asset_server: Res<AssetServer>,
+    assets: Res<AssetCol>,
+    audio: Res<Audio>
 ) {
     let window: &Window = window_query.get_single().unwrap();
+
+    /*audio
+        .play(assets.tune.clone())
+        .loop_from(0.0)
+        .fade_in(AudioTween::new(
+            Duration::from_secs(2),
+            AudioEasing::OutPowi(2),
+        ))
+        .with_volume(0.1);*/
 
     // Background image
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("img/bg.png"),
+            texture: assets.bg.clone(),
             transform: Transform::from_xyz(
                 window.width() / 2.0,
                 window.height() / 2.0,
@@ -168,7 +180,7 @@ fn game_setup(
             // Accepts a `String` or any type that converts into a `String`, such as `&str`
             "exit",
             TextStyle {
-                font: asset_server.load("font/FredokaOne-Regular.ttf"),
+                font: assets.font.clone(),
                 font_size: 24.0,
                 color: Color::WHITE,
             },
