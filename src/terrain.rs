@@ -8,6 +8,7 @@ use rand::seq::SliceRandom;
 use crate::AssetCol;
 use crate::GameState;
 use crate::Layers;
+use crate::game::OnGameScreen;
 use crate::pathfinding::{
     Navmesh,
     update_navmesh_on_tile_change,
@@ -191,7 +192,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
         }
     }
 
-    commands.spawn_empty()
+    commands.spawn(OnGameScreen)
         .insert(Name::new("Map"))
         .push_children(&tiles);
 
@@ -203,6 +204,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let map_type = TilemapType::default();
 
     commands.entity(tilemap_entity).insert((
+        OnGameScreen,
         Terrarium,
         TilemapBundle {
             grid_size,
@@ -230,6 +232,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
             transform: Transform::from_xyz(0.0, 0.0, Layers::FOREGROUND),
             ..default()
         },
+        OnGameScreen
     ));
 }
 

@@ -1,7 +1,8 @@
 use crate::pathfinding::follow_path;
+use crate::pointer::Pointer;
 use crate::terrain::GAP_LEFT;
 use crate::{despawn_screen, prelude::*, GameState};
-use bevy::{input::mouse::MouseButtonInput, prelude::*, window::PrimaryWindow};
+use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::Layers;
 
@@ -14,7 +15,7 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     // dbg_draw_path,
-                    mouse_button_events,
+                    check_exit,
                     move_bob,
                     follow_path,
                     animate_sprite,
@@ -148,6 +149,43 @@ fn game_setup(
         OnGameScreen,
     ));
 
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::hsl(20., 0.5, 0.1),
+                custom_size: Some(Vec2::new(GAP_LEFT * 0.8, 50.0)),
+                ..default()
+            },
+            transform: Transform::from_xyz(GAP_LEFT / 2.0, 40.0, Layers::UI),
+            ..default()
+        },
+        OnGameScreen,
+    ));
+
+    commands.spawn((
+        // Create a TextBundle that has a Text with a single section.
+        TextBundle::from_section(
+            // Accepts a `String` or any type that converts into a `String`, such as `&str`
+            "exit",
+            TextStyle {
+                font: asset_server.load("font/FredokaOne-Regular.ttf"),
+                font_size: 24.0,
+                color: Color::WHITE,
+            },
+        ) // Set the alignment of the Text
+        .with_text_alignment(TextAlignment::Center)
+        // Set the style of the TextBundle itself.
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(30.0),
+            left: Val::Px(20.0),
+            ..default()
+        }),
+        OnGameScreen,
+    ));
+
+
+
     commands.insert_resource(GameData { tiles: 1 });
 }
 
@@ -180,25 +218,13 @@ fn move_with_keys(
     }
 }
 
-fn mouse_button_events(
-    mut commands: Commands,
-    mut events: EventReader<MouseButtonInput>,
-    assets: Res<AssetServer>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-) {
-    use bevy::input::ButtonState;
 
-    let pos = windows.single().cursor_position();
-
-    for ev in &mut events {
-        match ev.state {
-            ButtonState::Released => {
-                if let Some(position) = pos {
-                    organism::create_random_organsim(&mut commands, &assets, position);
-                }
-            }
-            _ => ()
-        }
+fn check_exit(
+    pointer: Res<Pointer>,
+    mut game_state: ResMut<NextState<GameState>>,
+){
+    if pointer.released && pointer.pos.x < GAP_LEFT * 0.95 {
+        // transition to splash.
+        game_state.set(GameState::Splash);
     }
 }
-

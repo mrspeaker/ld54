@@ -1,3 +1,4 @@
+use crate::game::OnGameScreen;
 use crate::prelude::*;
 use crate::GameState;
 
@@ -29,6 +30,7 @@ fn ui_setup(
     commands.insert_resource(Inventory { dirt: DIRT_AMOUNT });
 
     commands.spawn((
+        OnGameScreen,
         TextBundle::from_section(
             DIRT_AMOUNT.to_string(),
             TextStyle {
