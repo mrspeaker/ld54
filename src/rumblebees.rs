@@ -119,7 +119,7 @@ fn rumblebee_setup(
         let arm = commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: assets.arms.clone(),
-                transform: Transform::from_xyz(0.,0., 0.01), //.with_scale(Vec3::splat(50.0/80.0)),
+                transform: Transform::from_xyz(0.,0., 0.01),
                 ..default()
             },
             Army
@@ -128,7 +128,7 @@ fn rumblebee_setup(
         let eyes = commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: assets.chars.clone(),
-                transform: Transform::from_xyz(0.,0., 0.01), //.with_scale(Vec3::splat(50.0/80.0)),
+                transform: Transform::from_xyz(0.,0., 0.01),
                 sprite: TextureAtlasSprite::new(9),
                 ..default()
             },
@@ -140,7 +140,7 @@ fn rumblebee_setup(
             SpriteSheetBundle {
                 texture_atlas: assets.chars.clone(),
                 sprite: TextureAtlasSprite::new(6),
-                transform: Transform::from_xyz(0.,2., 0.01).with_scale(Vec3::splat(50./80.)),
+                transform: Transform::from_xyz(0.,2., 0.01),
                 ..default()
             },
             AnimationIndices { frames: vec![6, 7, 8, 7], cur: 0 },
