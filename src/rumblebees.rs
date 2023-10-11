@@ -20,10 +20,10 @@ impl Plugin for RumblebeePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(OnEnter(GameState::InGame), rumblebee_setup)
-            .add_systems(Update, set_unassigned_bees)
             .add_systems(
                 Update,
                 (
+                    set_unassigned_bees,
                     find_target,
                     bee_fight_collisions,
                     bee_egg_collisions,
@@ -66,7 +66,7 @@ fn rumblebee_setup(
     // Make the beez
     let num_beez = 8;
     for i in 0..num_beez {
-        let pos = TilePos { x: 0, y : 0 };
+        let pos = TilePos { x: 10, y : 10 };
         let bee_z = Layers::MIDGROUND + i as f32;
         let bee_pos = Vec3::new(
             pos.x as f32 * TILE_SIZE + GAP_LEFT,
@@ -162,7 +162,6 @@ fn set_unassigned_bees(
             }
             transform.translation.x = target.x as f32 * grid_size.x + 25.0 + GAP_LEFT;
             transform.translation.y = target.y as f32 * grid_size.y + 25.0;
-
             commands.entity(ent).remove::<Beenitialized>();
         }
     }
@@ -268,7 +267,7 @@ fn find_target(
             TilePos::from_world_pos(pos, map_size, grid_size, map_type)
         else {
             //Why are some not getting world pos?
-            // info!("Entity outside map {:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
+            //info!("Entity outside map {:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
             continue;
         };
 
