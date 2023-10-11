@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use bevy::math::Vec4Swizzles;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
+use rand::Rng;
 use rand::seq::SliceRandom;
 
 use crate::AssetCol;
@@ -151,13 +154,13 @@ struct Colliding;
 struct TileOffset(u16);
 
 #[derive(Component)]
-struct LastUpdate(f64);
-
-#[derive(Component)]
 pub struct Cursor;
 
 #[derive(Component)]
 pub struct Terrarium;
+
+#[derive(Resource, Deref, DerefMut)]
+struct PlantSpawner(Timer);
 
 fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load("img/tiles.png");
@@ -192,6 +195,10 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
         }
     }
 
+    commands.insert_resource(PlantSpawner(
+        Timer::new(Duration ::from_secs(8), TimerMode::Repeating),
+    ));
+
     commands.spawn(OnGameScreen)
         .insert(Name::new("Map"))
         .push_children(&tiles);
@@ -220,7 +227,6 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
             ),
             ..Default::default()
         },
-        LastUpdate(0.0),
         TileOffset(1),
         navmesh
     ));
@@ -274,8 +280,8 @@ fn get_tile_from_ascii(pos: TilePos, size: TilemapSize) -> Tile {
     .t..............t...###\
     ######..........t.##...\
     ................##.....\
-    ............2......LL.#\
-    ....LLLL....t....#####%\
+    ............2.........#\
+    ....##.##...t....#####%\
     .a..........t.b........\
     ##.........####........\
     L.#..............###...\
@@ -431,53 +437,65 @@ pub fn draw_tile(
 
 fn spawn_plant(
     mut commands: Commands,
-    key_in: Res<Input<KeyCode>>,
     mut tilemap_query: Query<(&TileStorage, &TilemapSize)>,
-    query: Query<(Entity, &TilePos), With<Topsoil>>,
+    topsoil: Query<(Entity, &TilePos), With<Topsoil>>,
     tile_query: Query<&Tile>,
+    time: Res<Time>,
+    mut plant_spawner: ResMut<PlantSpawner>
 ) {
-    for (tile_storage, map_size) in &mut tilemap_query {
-        if key_in.pressed(KeyCode::Space) {
-            let mut possible_plants: Vec<(Entity, Vec<Entity>)> = vec![];
-            for (ent, pos) in &query {
-                let mut pos = *pos;
-                let mut plant_stack: Vec<Entity> = vec![];
-                for _iter in 1..=MAX_PLANT_HEIGHT {
-                    if let Some(newpos) =
-                        Neighbors::get_square_neighboring_positions(&pos, map_size, false).north
-                    {
-                        pos = newpos;
-                        if let Some(plant_ent) = tile_storage.get(&pos) {
-                            if let Ok(tile) = tile_query.get(plant_ent) {
-                                match tile {
-                                    Tile::Air => plant_stack.push(plant_ent),
-                                    _ => break,
-                                }
-                            }
+    plant_spawner.tick(time.delta());
+    if !plant_spawner.finished() {
+        return;
+    }
+
+    let (tile_storage, map_size) = tilemap_query.single_mut();
+
+    let mut possible_plants: Vec<(Entity, Vec<(Entity, bool)>)> = vec![];
+
+    for (topsoil_ent, topsoil_pos) in &topsoil {
+        let mut pos = *topsoil_pos;
+        let mut plant_stack: Vec<(Entity, bool)> = vec![];
+        let mut rng = rand::thread_rng();
+        let height = rng.gen_range(1..MAX_PLANT_HEIGHT+1);
+        for i in 1..=height {
+            if let Some(newpos) =
+                Neighbors::get_square_neighboring_positions(&pos, map_size, false).north
+            {
+                let is_top = i == height;
+                pos = newpos;
+                if let Some(plant_ent) = tile_storage.get(&pos) {
+                    if let Ok(tile) = tile_query.get(plant_ent) {
+                        match tile {
+                            Tile::Air => plant_stack.push((plant_ent, is_top)),
+                            _ => break,
                         }
-                    } else {
-                        break;
                     }
                 }
-                if !plant_stack.is_empty() {
-                    possible_plants.push((ent, plant_stack));
-                }
+            } else {
+                break;
             }
-            if let Some((soil_ent, plant_stack)) = possible_plants.choose(&mut rand::thread_rng()) {
-                commands.entity(*soil_ent).insert(Tile::Dirt {
-                    topsoil: false,
-                    style: 5,
-                });
-                for plant_ent in plant_stack {
-                    commands.entity(*plant_ent).insert((
-                        Plant {
-                            ptype: Faction::Red,
-                            status: PlantStatus::Growing,
-                        },
-                        Tile::Stalk { style: 0 },
-                    ));
+        }
+        if !plant_stack.is_empty() {
+            possible_plants.push((topsoil_ent, plant_stack));
+        }
+    }
+    if let Some((soil_ent, plant_stack)) = possible_plants.choose(&mut rand::thread_rng()) {
+        commands.entity(*soil_ent).insert(Tile::Dirt {
+            topsoil: false,
+            style: 5,
+        });
+        for (plant_ent, is_top) in plant_stack {
+            commands.entity(*plant_ent).insert((
+                Plant {
+                    ptype: Faction::Red,
+                    status: PlantStatus::Growing,
+                },
+                if *is_top {
+                    Tile::Leaves { style: 0 }
+                } else {
+                    Tile::Stalk { style: 0 }
                 }
-            }
+            ));
         }
     }
 }

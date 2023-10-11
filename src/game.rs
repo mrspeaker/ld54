@@ -51,9 +51,6 @@ pub struct Fight {
 #[derive(Component)]
 pub struct OnGameScreen;
 
-#[derive(Resource, Deref, DerefMut)]
-struct GameTimer(Timer);
-
 #[derive(Component)]
 pub struct AnimationIndices {
     pub frames: Vec<usize>,
