@@ -196,7 +196,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     }
 
     commands.insert_resource(PlantSpawner(
-        Timer::new(Duration ::from_secs(8), TimerMode::Repeating),
+        Timer::new(Duration ::from_secs(6), TimerMode::Repeating),
     ));
 
     commands.spawn(OnGameScreen)
