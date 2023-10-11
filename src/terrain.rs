@@ -276,18 +276,18 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
 fn get_tile_from_ascii(pos: TilePos, size: TilemapSize) -> Tile {
     let tilemap = b"\
     .1.....................\
-    .t..............L......\
-    .t..............t...###\
-    ######..........t.##...\
+    .t.....................\
+    .t..................###\
+    ######............##...\
     ................##.....\
     ............2.........#\
     ....##.##...t....#####%\
     .a..........t.b........\
     ##.........####........\
     L.#..............###...\
-    ...#...........L.......\
-    ...............t.......\
-    ###......a.....t....###\
+    ...#...................\
+    .......................\
+    ###......a..........###\
     %%%#################%XX\
     XXXXXXXXXXXXXXXXXXXXXXX";
 
@@ -485,17 +485,24 @@ fn spawn_plant(
             style: 5,
         });
         for (plant_ent, is_top) in plant_stack {
-            commands.entity(*plant_ent).insert((
-                Plant {
-                    ptype: Faction::Red,
-                    status: PlantStatus::Growing,
-                },
-                if *is_top {
-                    Tile::Leaves { style: 0 }
-                } else {
+            if *is_top {
+                let mut rng = rand::thread_rng();
+                let is_blue = rng.gen_bool(0.5);
+                commands.entity(*plant_ent).insert((
+                    Egg {
+                        faction: if is_blue { Faction::Blue } else { Faction::Red }
+                    },
+                    Tile::Egg { style: if is_blue { 1 } else { 0 }  }
+                ));
+            } else {
+                commands.entity(*plant_ent).insert((
+                    Plant {
+                        ptype: Faction::Red,
+                        status: PlantStatus::Growing,
+                    },
                     Tile::Stalk { style: 0 }
-                }
-            ));
+                ));
+            }
         }
     }
 }

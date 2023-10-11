@@ -231,7 +231,7 @@ fn check_exit(
     pointer: Res<Pointer>,
     mut game_state: ResMut<NextState<GameState>>,
 ){
-    if pointer.released && pointer.pos.x < GAP_LEFT * 0.95 {
+    if pointer.released && pointer.pos.x < GAP_LEFT * 0.95 && pointer.pos.y < 65.0 {
         // transition to splash.
         game_state.set(GameState::Splash);
     }

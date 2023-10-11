@@ -4,6 +4,7 @@ use crate::game::{
 };
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
+use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg, Faction};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
@@ -206,9 +207,10 @@ fn bee_egg_collisions(
     mut commands: Commands,
     beez: Query<(Entity, &RumbleBee, &Transform)>,
     mut eggs: Query<(Entity, &Egg, &mut Tile, &TilePos)>,
-    tilemap: Query<&TilemapGridSize>
+    tilemap: Query<(&TileStorage, &TilemapSize, &TilemapGridSize)>,
+    mut tile_query: Query<&mut Tile, Without<Egg>>,
 ){
-    let grid_size = tilemap.single();
+    let (tile_storage, map_size, grid_size) = tilemap.single();
 
     for (_bee_ent, bee, bee_pos) in beez.iter() {
         for (egg_ent, egg, mut egg_tile, egg_pos) in eggs.iter_mut() {
@@ -221,7 +223,34 @@ fn bee_egg_collisions(
             if bee_pos.translation.distance(pos) < 20.0 && bee.faction == egg.faction {
                 // Got a egg.. turning it to poo for some reason
                 commands.entity(egg_ent).remove::<Egg>();
-                *egg_tile = Tile::Poo{ style: if bee.faction == Faction::Blue { 1 } else { 0 } };
+                *egg_tile = Tile::Air;//Poo{ style: if bee.faction == Faction::Blue { 1 } else { 0 } };
+
+                let mut next_pos = egg_pos.clone();
+                let mut is_stalk = true;
+                while is_stalk {
+                    let down_pos = Neighbors::get_square_neighboring_positions(&next_pos, map_size, false).south;
+                    match down_pos {
+                        Some(down_pos) => {
+                            if let Some(plant_ent) = tile_storage.get(&down_pos) {
+                                if let Ok(mut tile) = tile_query.get_mut(plant_ent) {
+                                    match &mut *tile {
+                                        Tile::Stalk { style } => {
+                                            if *style == 0 {
+                                                *style = 1;
+                                            }
+                                            next_pos = down_pos;
+                                        },
+                                        _ => {
+                                            is_stalk = false;
+                                        },
+                                    }
+                                }
+                            }
+                        },
+                        None => {
+                            is_stalk = false;
+                        }
+                    }}
             }
         }
     }
