@@ -308,7 +308,7 @@ fn get_tile_from_ascii(pos: TilePos, size: TilemapSize) -> Tile {
         b'L' => Tile::Leaves { style: 1 },
         b'.' => Tile::Air,
         _ => Tile::Unknown,
-    }
+    }.clone()
 }
 
 fn highlight_tile(
