@@ -6,7 +6,7 @@ use crate::AssetCol;
 use crate::pathfinding::FollowPath;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use rand::seq::IteratorRandom;
-use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg, Faction};
+use crate::terrain::{GAP_LEFT, Tile, Egg, Faction};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::prelude::*;
@@ -33,7 +33,7 @@ impl Plugin for RumblebeePlugin {
                     bee_egg_collisions,
                     bee_fight,
                     big_bee_fight,
-                    bee_dead.after(find_target)
+                    bee_dead.after(find_target).after(bee_fight_collisions).after(bee_fight)
                 ).run_if(in_state(GameState::InGame)),
             );
     }
@@ -72,7 +72,8 @@ pub struct BeeBorn {
 fn birth_a_bee(
     mut commands: Commands,
     assets: Res<AssetCol>,
-    bees: Query<(Entity, &BeeBorn)>
+    bees: Query<(Entity, &BeeBorn)>,
+    parent: Query<Entity, With<BeeContainer>>
 ) {
     for (ent, spawn) in bees.iter() {
 
@@ -142,6 +143,9 @@ fn birth_a_bee(
 
         // should be bee or bee_sprite?
         commands.entity(bee).push_children(&[wings, arm, eyes]);
+        if let Ok(beez) = parent.get_single() {
+            commands.entity(beez).push_children(&[bee]);
+        }
 
     }
 }
@@ -150,13 +154,19 @@ fn birth_a_bee(
 #[derive(Component)]
 pub struct Army;
 
+#[derive(Component)]
+pub struct BeeContainer;
+
 fn rumblebee_setup(
     mut commands: Commands,
 ){
+    commands.spawn((SpatialBundle { ..default() }, BeeContainer, OnGameScreen))
+        .insert(Name::new("Beez"));
+
     // Make the beez
     let num_beez = 4;
     for i in 0..num_beez {
-        // Spawn new bee
+        // Spawn new bee spawn (added in birth_bee)
         commands.spawn(BeeBorn {
             pos: None,
             faction: if i < num_beez / 2 { Faction::Blue } else { Faction::Red }

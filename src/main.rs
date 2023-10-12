@@ -22,7 +22,7 @@ use bevy::{asset::HandleId, prelude::*};
 use bevy_debug_text_overlay::{screen_print, OverlayPlugin};
 use bevy_kira_audio::prelude::*;
 use bevy_asset_loader::prelude::*;
-// use debug::DebugPlugin;
+//use debug::DebugPlugin;
 
 pub mod prelude {
     pub use bevy::prelude::*;
