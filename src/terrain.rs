@@ -281,7 +281,7 @@ fn get_tile_from_ascii(pos: TilePos, size: TilemapSize) -> Tile {
     ######............##...\
     ................##.....\
     ............2.........#\
-    ....##.##...t....#####%\
+    ....#####...t....#####%\
     .a..........t.b........\
     ##.........####........\
     L.#..............###...\
@@ -375,9 +375,10 @@ fn highlight_tile(
                     // Play some noise
                     audio.play(assets.blip.clone()).with_volume(0.3);
 
-                    // Don't think it can ever get here? We can't draw stalks.
+
+                    // no good? - can't add same comp twice, will crash
                     match pointer.tile {
-                        Tile::Stalk { .. } => {
+                        Tile::Dirt { .. } => {
                             commands.entity(tile_entity).insert(Topsoil);
                         }
                         _ => (),

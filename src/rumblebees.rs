@@ -5,7 +5,7 @@ use crate::game::{
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
-use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg};
+use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg, Faction};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::prelude::*;
@@ -31,7 +31,8 @@ impl Plugin for RumblebeePlugin {
                     bee_egg_collisions,
                     bee_fight,
                     big_bee_fight,
-                    bee_dead
+                    bee_dead,
+                    birth_a_bee
                 ).run_if(in_state(GameState::InGame)),
             );
     }
@@ -67,6 +68,92 @@ pub enum BeeState {
     EggHunt,
     Fight {
         opponent: Entity
+    }
+}
+
+#[derive(Component)]
+pub struct BeeBorn {
+    pub pos: Vec3,
+    pub faction: Faction
+}
+
+fn birth_a_bee(
+    mut commands: Commands,
+    assets: Res<AssetCol>,
+    bees: Query<(Entity, &BeeBorn)>
+) {
+    for (ent, spawn) in bees.iter() {
+
+        commands.entity(ent).despawn();
+
+        let bee_pos = Vec3::new(
+            spawn.pos.x,
+            spawn.pos.y,
+            Layers::MIDGROUND + spawn.pos.z
+        );
+
+        let is_blue = if spawn.faction == Faction::Blue { true } else { false };
+        let bee_sprite = SpriteSheetBundle {
+            texture_atlas: assets.chars.clone(),
+            transform: Transform::from_translation(bee_pos)
+                .with_scale(Vec3::splat(50.0/80.0)),
+            sprite: TextureAtlasSprite::new(if is_blue {0} else {1}),
+            ..default()
+        };
+
+        let bee = commands.spawn((
+            bee_sprite,
+            RumbleBee {
+                faction: match is_blue {
+                    true => terrain::Faction::Blue,
+                    false => terrain::Faction::Red
+                }
+            },
+            Beenitialized,
+            OnGameScreen,
+            FollowPath {
+                end: bee_pos.xy(),
+                done: true,
+            },
+            Speed { speed: RUMBLEBEE_SPEED },
+            Bob,
+            Displacement(Vec2 { x: 0., y: 0. }),
+        )).id();
+
+        let arm = commands.spawn((
+            SpriteSheetBundle {
+                texture_atlas: assets.arms.clone(),
+                transform: Transform::from_xyz(0.,0., 0.01),
+                ..default()
+            },
+            Army
+        )).id();
+
+        let eyes = commands.spawn((
+            SpriteSheetBundle {
+                texture_atlas: assets.chars.clone(),
+                transform: Transform::from_xyz(0.,0., 0.01),
+                sprite: TextureAtlasSprite::new(9),
+                ..default()
+            },
+            AnimationIndices { frames: vec![9, 10, 11, 10], cur: 0 },
+            AnimationTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
+        )).id();
+
+        let wings = commands.spawn((
+            SpriteSheetBundle {
+                texture_atlas: assets.chars.clone(),
+                sprite: TextureAtlasSprite::new(6),
+                transform: Transform::from_xyz(0.,2., 0.01),
+                ..default()
+            },
+            AnimationIndices { frames: vec![6, 7, 8, 7], cur: 0 },
+            AnimationTimer(Timer::from_seconds(0.04, TimerMode::Repeating)),
+        )).id();
+
+        // should be bee or bee_sprite?
+        commands.entity(bee).push_children(&[wings, arm, eyes]);
+
     }
 }
 
@@ -215,7 +302,7 @@ fn bee_egg_collisions(
     for (_bee_ent, bee, bee_pos) in beez.iter() {
         for (egg_ent, egg, mut egg_tile, egg_pos) in eggs.iter_mut() {
             let pos = Vec3 {
-                x: egg_pos.x as f32 * grid_size.x + 25. +GAP_LEFT,
+                x: egg_pos.x as f32 * grid_size.x + 25. + GAP_LEFT,
                 y: egg_pos.y as f32 * grid_size.y + 25.,
                 z: bee_pos.translation.z
             };
@@ -225,8 +312,11 @@ fn bee_egg_collisions(
                 commands.entity(egg_ent).remove::<Egg>();
                 *egg_tile = Tile::Air;
 
-                // TODO: spawn new bee
-                // ...
+                // Spawn new bee
+                commands.spawn(BeeBorn {
+                    pos: pos.clone(),
+                    faction: egg.faction
+                });
 
                 // Turn stalks to dead.
                 let mut next_pos = egg_pos.clone();
@@ -375,10 +465,10 @@ fn big_bee_fight(
         if t.as_secs() > 5 {
             if bees.iter().any(|entity| entity == beefight.bee1) {
                 commands.entity(beefight.bee1).remove::<BeeFight>();
-            }
+            } else { info!("nop b1") }
             if bees.iter().any(|entity| entity == beefight.bee2) {
-                commands.entity(beefight.bee2).insert(BeeKilled);
-            }
+                commands.entity(beefight.bee2).remove::<BeeFight>().insert(BeeKilled);
+            } else { info!("nop b2") }
             commands.entity(ent).despawn();
         }
     }
