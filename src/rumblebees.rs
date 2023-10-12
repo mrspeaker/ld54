@@ -5,7 +5,7 @@ use crate::game::{
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
-use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg, Faction};
+use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::prelude::*;
@@ -221,10 +221,14 @@ fn bee_egg_collisions(
             };
 
             if bee_pos.translation.distance(pos) < 20.0 && bee.faction == egg.faction {
-                // Got a egg.. turning it to poo for some reason
+                // Got a egg..
                 commands.entity(egg_ent).remove::<Egg>();
-                *egg_tile = Tile::Air;//Poo{ style: if bee.faction == Faction::Blue { 1 } else { 0 } };
+                *egg_tile = Tile::Air;
 
+                // TODO: spawn new bee
+                // ...
+
+                // Turn stalks to dead.
                 let mut next_pos = egg_pos.clone();
                 let mut is_stalk = true;
                 while is_stalk {
@@ -363,13 +367,18 @@ fn find_target(
 fn big_bee_fight(
     mut commands: Commands,
     mut ent: Query<(Entity, &mut BigBeeFight)>,
-    time: Res<Time>
+    time: Res<Time>,
+    bees: Query<Entity, With<BeeFight>>
 ){
     for (ent, beefight) in ent.iter_mut() {
         let t = time.last_update().unwrap() - beefight.started;
         if t.as_secs() > 5 {
-            commands.entity(beefight.bee1).remove::<BeeFight>();
-            commands.entity(beefight.bee2).insert(BeeKilled);
+            if bees.iter().any(|entity| entity == beefight.bee1) {
+                commands.entity(beefight.bee1).remove::<BeeFight>();
+            }
+            if bees.iter().any(|entity| entity == beefight.bee2) {
+                commands.entity(beefight.bee2).insert(BeeKilled);
+            }
             commands.entity(ent).despawn();
         }
     }
