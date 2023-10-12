@@ -5,6 +5,7 @@ use crate::game::{
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
+use rand::seq::IteratorRandom;
 use crate::terrain::{GAP_LEFT, TILE_SIZE, Tile, Egg, Faction};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
@@ -25,6 +26,7 @@ impl Plugin for RumblebeePlugin {
             .add_systems(
                 Update,
                 (
+                    birth_a_bee,
                     set_unassigned_bees,
                     find_target,
                     bee_fight_collisions,
@@ -32,7 +34,6 @@ impl Plugin for RumblebeePlugin {
                     bee_fight,
                     big_bee_fight,
                     bee_dead,
-                    birth_a_bee
                 ).run_if(in_state(GameState::InGame)),
             );
     }
@@ -44,12 +45,12 @@ pub struct RumbleBee {
 }
 
 #[derive(Component)]
-pub struct Beenitialized;
+pub struct Beenitialized {
+    pub pos: Option<Vec2>
+}
 
 #[derive(Component)]
-pub struct BeeFight {
-    pub opponent: Entity
-}
+pub struct BeeFight;
 
 #[derive(Component)]
 pub struct BeeKilled;
@@ -60,15 +61,6 @@ pub struct BigBeeFight {
     pub bee1: Entity,
     pub bee2: Entity,
     started: Instant
-}
-
-#[derive(Component)]
-pub enum BeeState {
-    Wander,
-    EggHunt,
-    Fight {
-        opponent: Entity
-    }
 }
 
 #[derive(Component)]
@@ -109,7 +101,9 @@ fn birth_a_bee(
                     false => terrain::Faction::Red
                 }
             },
-            Beenitialized,
+            Beenitialized {
+                pos: Some(bee_pos.xy())
+            },
             OnGameScreen,
             FollowPath {
                 end: bee_pos.xy(),
@@ -193,7 +187,9 @@ fn rumblebee_setup(
                     false => terrain::Faction::Red
                 }
             },
-            Beenitialized,
+            Beenitialized {
+                pos: None
+            },
             OnGameScreen,
             FollowPath {
                 end: bee_pos.xy(),
@@ -244,7 +240,7 @@ fn rumblebee_setup(
 
 fn set_unassigned_bees(
     mut commands: Commands,
-    mut ent: Query<(Entity, &mut Transform), (With<RumbleBee>, With<Beenitialized>)>,
+    mut ent: Query<(Entity, &mut Transform, &Beenitialized), With<RumbleBee>>,
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -253,17 +249,19 @@ fn set_unassigned_bees(
 ){
     if !tilemap.is_empty() {
         let (map_size, grid_size, navmesh) = tilemap.single();
-        for (ent, mut transform) in ent.iter_mut() {
-            let mut target = TilePos { x: 0, y: 0 };
-            let mut rng = rand::thread_rng();
-            let mut ok = false;
-            while !ok {
-                target.x = rng.gen_range(0..map_size.x);
-                target.y = rng.gen_range(0..map_size.y);
-                ok = !navmesh.solid(target);
+        for (ent, mut transform, beeinit) in ent.iter_mut() {
+            if beeinit.pos.is_none() {
+                let mut target = TilePos { x: 0, y: 0 };
+                let mut rng = rand::thread_rng();
+                let mut ok = false;
+                while !ok {
+                    target.x = rng.gen_range(0..map_size.x);
+                    target.y = rng.gen_range(0..map_size.y);
+                    ok = !navmesh.solid(target);
+                }
+                transform.translation.x = target.x as f32 * grid_size.x + 25.0 + GAP_LEFT;
+                transform.translation.y = target.y as f32 * grid_size.y + 25.0;
             }
-            transform.translation.x = target.x as f32 * grid_size.x + 25.0 + GAP_LEFT;
-            transform.translation.y = target.y as f32 * grid_size.y + 25.0;
             commands.entity(ent).remove::<Beenitialized>();
         }
     }
@@ -369,12 +367,12 @@ fn bee_fight_collisions(
             //check for collision between entity_a and entity_b here
             if pos_a.translation.distance(pos_b.translation) < 50.0 {
                 // GET READY TO BRUMBLE!
-                commands.entity(*ent_a).insert(BeeFight{
-                    opponent: *ent_b
-                });
-                commands.entity(*ent_b).insert(BeeFight{
-                    opponent: *ent_a
-                });
+                if let Some(mut e) = commands.get_entity(*ent_a) {
+                    e.insert(BeeFight);
+                }
+                if let Some(mut e) = commands.get_entity(*ent_b) {
+                    e.insert(BeeFight);
+                }
                 commands.spawn(BigBeeFight {
                     bee1: *ent_a,
                     bee2: *ent_b,
@@ -415,13 +413,13 @@ fn find_target(
         };
 
 
-        let mut targets = eggs.iter().filter_map(|(egg, pos)| {
+        let targets = eggs.iter().filter_map(|(egg, pos)| {
             (egg.faction == entity.2.faction).then_some((egg, pos))
         });
 
         let mut target_path: Option<Pathfinding> = None;
         // have a target egg - go to it!
-        if let Some(first) = targets.next() {
+        if let Some(first) = targets.choose(&mut rand::thread_rng()) {
             if let Some(path) = Pathfinding::astar(navmesh, entity_pos, first.1.clone()) {
                 target_path = Some(path);
             }
@@ -446,7 +444,9 @@ fn find_target(
         }
 
         if let Some(path) = target_path {
-            commands.entity(entity.0).insert(path);
+            if let Some(mut e) = commands.get_entity(entity.0) {
+                e.insert(path);
+            }
         }
 
     }
