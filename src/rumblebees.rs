@@ -33,7 +33,7 @@ impl Plugin for RumblebeePlugin {
                     bee_egg_collisions,
                     bee_fight,
                     big_bee_fight,
-                    bee_dead,
+                    bee_dead.after(find_target)
                 ).run_if(in_state(GameState::InGame)),
             );
     }
@@ -65,7 +65,7 @@ pub struct BigBeeFight {
 
 #[derive(Component)]
 pub struct BeeBorn {
-    pub pos: Vec3,
+    pub pos: Option<Vec2>,
     pub faction: Faction
 }
 
@@ -78,17 +78,12 @@ fn birth_a_bee(
 
         commands.entity(ent).despawn();
 
-        let bee_pos = Vec3::new(
-            spawn.pos.x,
-            spawn.pos.y,
-            Layers::MIDGROUND + spawn.pos.z
-        );
+        let pos:Vec2 = spawn.pos.unwrap_or_else(|| Vec2::new(0.0,0.0));
 
         let is_blue = if spawn.faction == Faction::Blue { true } else { false };
         let bee_sprite = SpriteSheetBundle {
             texture_atlas: assets.chars.clone(),
-            transform: Transform::from_translation(bee_pos)
-                .with_scale(Vec3::splat(50.0/80.0)),
+            transform: Transform::from_scale(Vec3::splat(50.0/80.0)),
             sprite: TextureAtlasSprite::new(if is_blue {0} else {1}),
             ..default()
         };
@@ -102,11 +97,11 @@ fn birth_a_bee(
                 }
             },
             Beenitialized {
-                pos: Some(bee_pos.xy())
+                pos: spawn.pos,
             },
             OnGameScreen,
             FollowPath {
-                end: bee_pos.xy(),
+                end: pos,
                 done: true,
             },
             Speed { speed: RUMBLEBEE_SPEED },
@@ -157,83 +152,15 @@ pub struct Army;
 
 fn rumblebee_setup(
     mut commands: Commands,
-    assets: Res<AssetCol>
 ){
     // Make the beez
-    let num_beez = 8;
+    let num_beez = 4;
     for i in 0..num_beez {
-        let pos = TilePos { x: 0, y : 0 };
-        let bee_z = Layers::MIDGROUND + i as f32;
-        let bee_pos = Vec3::new(
-            pos.x as f32 * TILE_SIZE + GAP_LEFT,
-            pos.y as f32 * TILE_SIZE,
-            bee_z,
-        );
-
-        let is_blue = i < num_beez / 2;
-        let bee_sprite = SpriteSheetBundle {
-            texture_atlas: assets.chars.clone(),
-            transform: Transform::from_translation(bee_pos)
-                .with_scale(Vec3::splat(50.0/80.0)),
-            sprite: TextureAtlasSprite::new(if is_blue {0} else {1}),
-            ..default()
-        };
-
-        let bee = commands.spawn((
-            bee_sprite,
-            RumbleBee {
-                faction: match is_blue {
-                    true => terrain::Faction::Blue,
-                    false => terrain::Faction::Red
-                }
-            },
-            Beenitialized {
-                pos: None
-            },
-            OnGameScreen,
-            FollowPath {
-                end: bee_pos.xy(),
-                done: true,
-            },
-            Speed { speed: RUMBLEBEE_SPEED },
-            Bob,
-            Displacement(Vec2 { x: 0., y: 0. }),
-        )).id();
-
-        let arm = commands.spawn((
-            SpriteSheetBundle {
-                texture_atlas: assets.arms.clone(),
-                transform: Transform::from_xyz(0.,0., 0.01),
-                ..default()
-            },
-            Army
-        )).id();
-
-        let eyes = commands.spawn((
-            SpriteSheetBundle {
-                texture_atlas: assets.chars.clone(),
-                transform: Transform::from_xyz(0.,0., 0.01),
-                sprite: TextureAtlasSprite::new(9),
-                ..default()
-            },
-            AnimationIndices { frames: vec![9, 10, 11, 10], cur: 0 },
-            AnimationTimer(Timer::from_seconds(1.0 + (i as f32 * 0.1), TimerMode::Repeating)),
-        )).id();
-
-        let wings = commands.spawn((
-            SpriteSheetBundle {
-                texture_atlas: assets.chars.clone(),
-                sprite: TextureAtlasSprite::new(6),
-                transform: Transform::from_xyz(0.,2., 0.01),
-                ..default()
-            },
-            AnimationIndices { frames: vec![6, 7, 8, 7], cur: 0 },
-            AnimationTimer(Timer::from_seconds(0.03 + (i as f32 * 0.01), TimerMode::Repeating)),
-        )).id();
-
-        // should be bee or bee_sprite?
-        commands.entity(bee).push_children(&[wings, arm, eyes]);
-
+        // Spawn new bee
+        commands.spawn(BeeBorn {
+            pos: None,
+            faction: if i < num_beez / 2 { Faction::Blue } else { Faction::Red }
+        });
     }
 
 }
@@ -249,19 +176,30 @@ fn set_unassigned_bees(
 ){
     if !tilemap.is_empty() {
         let (map_size, grid_size, navmesh) = tilemap.single();
+        let mut rng = rand::thread_rng();
+
         for (ent, mut transform, beeinit) in ent.iter_mut() {
-            if beeinit.pos.is_none() {
-                let mut target = TilePos { x: 0, y: 0 };
-                let mut rng = rand::thread_rng();
-                let mut ok = false;
-                while !ok {
-                    target.x = rng.gen_range(0..map_size.x);
-                    target.y = rng.gen_range(0..map_size.y);
-                    ok = !navmesh.solid(target);
+            let pos:Vec2 = match beeinit.pos {
+                Some(pos) => pos,
+                None => {
+                    let mut target = TilePos { x: 0, y: 0 };
+                    let mut ok = false;
+                    while !ok {
+                        target.x = rng.gen_range(0..map_size.x);
+                        target.y = rng.gen_range(0..map_size.y);
+                        ok = !navmesh.solid(target);
+                    }
+                    Vec2 {
+                        x: target.x as f32 * grid_size.x + 25.0 + GAP_LEFT,
+                        y: target.y as f32 * grid_size.y + 25.0
+                    }
                 }
-                transform.translation.x = target.x as f32 * grid_size.x + 25.0 + GAP_LEFT;
-                transform.translation.y = target.y as f32 * grid_size.y + 25.0;
-            }
+            };
+
+            // Set pos and give bee it's z index
+            transform.translation =
+                pos.extend(Layers::MIDGROUND + rng.gen_range(0..100) as f32);
+
             commands.entity(ent).remove::<Beenitialized>();
         }
     }
@@ -312,7 +250,7 @@ fn bee_egg_collisions(
 
                 // Spawn new bee
                 commands.spawn(BeeBorn {
-                    pos: pos.clone(),
+                    pos: Some(pos.xy().clone()),
                     faction: egg.faction
                 });
 
@@ -460,7 +398,7 @@ fn big_bee_fight(
     time: Res<Time>,
     bees: Query<Entity, With<BeeFight>>
 ){
-    for (ent, beefight) in ent.iter_mut() {
+    for (fight, beefight) in ent.iter_mut() {
         let t = time.last_update().unwrap() - beefight.started;
         if t.as_secs() > 5 {
             if bees.iter().any(|entity| entity == beefight.bee1) {
@@ -469,7 +407,7 @@ fn big_bee_fight(
             if bees.iter().any(|entity| entity == beefight.bee2) {
                 commands.entity(beefight.bee2).remove::<BeeFight>().insert(BeeKilled);
             } else { info!("nop b2") }
-            commands.entity(ent).despawn();
+            commands.entity(fight).despawn();
         }
     }
 }
