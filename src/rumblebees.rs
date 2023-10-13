@@ -418,7 +418,9 @@ fn big_bee_fight(
                 commands.entity(beefight.bee1).remove::<BeeFight>();
             } else { info!("nop b1") }
             if bees.iter().any(|entity| entity == beefight.bee2) {
-                commands.entity(beefight.bee2).remove::<BeeFight>().insert(BeeKilled);
+                commands
+                    .entity(beefight.bee2)
+                    .insert(BeeKilled);
             } else { info!("nop b2") }
             commands.entity(fight).despawn();
         }
