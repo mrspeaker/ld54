@@ -164,7 +164,7 @@ fn rumblebee_setup(
         .insert(Name::new("Beez"));
 
     // Make the beez
-    let num_beez = 4;
+    let num_beez = 2;
     for i in 0..num_beez {
         // Spawn new bee spawn (added in birth_bee)
         commands.spawn(BeeBorn {
@@ -305,15 +305,18 @@ fn bee_fight_collisions(
         (entity, rumblebee, transform)
     ).collect();
 
-    for i in 0..entities.len() {
-        for j in i+1..entities.len() {
-            let (ent_a,bee_a,  pos_a) = &entities[i];
+    let num = entities.len();
+    for i in 0..num {
+        let (ent_a,bee_a,  pos_a) = &entities[i];
+
+        for j in i + 1..num {
             let (ent_b,bee_b,  pos_b ) = &entities[j];
             if bee_a.faction == bee_b.faction {
                 continue;
             }
-            //check for collision between entity_a and entity_b here
-            if pos_a.translation.distance(pos_b.translation) < 50.0 {
+            let a = pos_a.translation.xy();
+            let b = pos_b.translation.xy();
+            if a.distance(b) < 50.0 {
                 // GET READY TO BRUMBLE!
                 if let Some(mut e) = commands.get_entity(*ent_a) {
                     e.insert(BeeFight);
