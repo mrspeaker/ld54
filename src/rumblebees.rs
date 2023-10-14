@@ -27,7 +27,9 @@ Systems:
 5. fight_collisions. <RumbeBee> Without<BeeFighter>
 6. became_a_fighter. <RumbleBee> Added<BeeFighter>
 7. bee_fight <BeeFight>. beez With<BeeFighter>
-8. bee_dead.after(find_target).after(bee_fight) Added<BeeKilled>
+8. bee_dead
+  .after(find_target)
+  .after(bee_fight) Added<BeeKilled>
 
 Setup:
 1. spawns some <BeeBorn> entities.
@@ -76,7 +78,7 @@ impl Plugin for RumblebeePlugin {
                     fight_collisions,
                     bee_fight,
                     became_a_fighter,
-                    bee_dead.after(find_target).after(became_a_fighter)
+                    bee_dead.after(find_target).after(bee_fight)
                 ).run_if(in_state(GameState::InGame)),
             );
     }
@@ -179,7 +181,7 @@ fn birth_a_bee(
                 end: pos.xy(),
                 done: true,
             },
-            Speed { speed: RUMBLEBEE_SPEED },
+            Speed { speed: rng.gen_range(RUMBLEBEE_SPEED * 0.8 .. RUMBLEBEE_SPEED * 1.2) },
             Bob,
             Displacement(Vec2 { x: 0., y: 0. }),
         )).id();
@@ -466,16 +468,16 @@ fn bee_dead(
             transform: Transform::from_xyz(
                 pos.translation.x.floor(),
                 pos.translation.y.floor(),
-                Layers::MIDGROUND),
+                Layers::MIDGROUND).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
             sprite: TextureAtlasSprite::new(37),
             ..default()
         }, OnGameScreen));
         commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
             transform: Transform::from_xyz(
-                pos.translation.x.floor() + 40.0,
+                pos.translation.x.floor() + 20.0,
                 pos.translation.y.floor(),
-                Layers::MIDGROUND),
+                Layers::MIDGROUND).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
             sprite: TextureAtlasSprite::new(38),
             ..default()
         }, OnGameScreen));
