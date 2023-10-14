@@ -290,9 +290,7 @@ fn find_target(
         }
 
         if let Some(path) = target_path {
-            if let Some(mut e) = commands.get_entity(entity.0) {
-                e.insert(path);
-            }
+            commands.entity(entity.0).insert(path);
         }
 
     }
@@ -369,10 +367,10 @@ fn fight_collisions(
 
     let num = entities.len();
     for i in 0..num {
-        let (ent_a,bee_a,  pos_a) = &entities[i];
+        let (ent_a, bee_a, pos_a) = &entities[i];
 
         for j in i + 1..num {
-            let (ent_b,bee_b,  pos_b ) = &entities[j];
+            let (ent_b, bee_b, pos_b) = &entities[j];
             if bee_a.faction == bee_b.faction {
                 continue;
             }
@@ -380,12 +378,8 @@ fn fight_collisions(
             let b = pos_b.translation.xy();
             if a.distance(b) < 50.0 {
                 // GET READY TO BRUMBLE!
-                if let Some(mut e) = commands.get_entity(*ent_a) {
-                    e.insert(BeeFighter);
-                }
-                if let Some(mut e) = commands.get_entity(*ent_b) {
-                    e.insert(BeeFighter);
-                }
+                commands.entity(*ent_a).insert(BeeFighter);
+                commands.entity(*ent_b).insert(BeeFighter);
                 commands.spawn(BeeFight {
                     bee1: *ent_a,
                     bee2: *ent_b,
@@ -447,9 +441,7 @@ fn bee_fight(
                 }
             }
             if bee == beefight.bee2 {
-                if let Some(mut b) = commands.get_entity(bee) {
-                    b.insert(BeeKilled);
-                }
+                commands.entity(beefight.bee2).insert(BeeKilled);
             }
         }
 
@@ -464,6 +456,7 @@ fn bee_dead(
     for (ent, pos) in ent.iter_mut() {
         commands.entity(ent).despawn_recursive();
 
+        // Add some bones
         // TODO: needs to set tilemap, not just be a sprite
         commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
