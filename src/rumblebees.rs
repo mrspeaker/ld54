@@ -1,12 +1,12 @@
 use crate::game::{
-    OnGameScreen, Speed, Bob, Displacement, AnimationTimer,
-    AnimationIndices
+    OnGameScreen, Speed, Bob, Displacement,
+    AnimationTimer, AnimationIndices
 };
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use rand::seq::IteratorRandom;
-use crate::terrain::{GAP_LEFT, Tile, Egg, Faction};
+use crate::terrain::{GAP_LEFT, Tile, Egg, Faction, tilepos_to_px, find_empty_tile};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::prelude::*;
@@ -18,6 +18,50 @@ use crate::Layers;
 
 const RUMBLEBEE_SPEED: f32 = 50.0;
 
+/*
+Systems:
+1. setup.
+2. birth_a_bee. <BeeBorn>,
+3. find_target. <Rumblebee> Without<Pathfinding, BeeFighter>
+4. egg_collisions. <Rumblebee>
+5. fight_collisions. <RumbeBee> Without<BeeFighter>
+6. became_a_fighter. <RumbleBee> Added<BeeFighter>
+7. bee_fight <BeeFight>. beez With<BeeFighter>
+8. bee_dead.after(find_target).after(bee_fight) Added<BeeKilled>
+
+Setup:
+1. spawns some <BeeBorn> entities.
+
+Update:
+2. birth_a_bee. <BeeBorn> <Navmesh>
+   - despawn <BeeBorn>
+   - spawn <RumbleBee>
+     - if has pos, set it else find blank tile.
+     - set pos + z index.
+
+3. find_target. <Rumblebee> Without<Pathfinding, BeeFighter>
+   - add <Pathfinding>
+
+4. egg_collisions. <Rumblebee>
+   - spawn <BeeBorn> on hit egg
+
+5. fight_collisions. <RumbeBee> Without<BeeFighter>
+   - for each pair, if collision:
+     - add <BeeFighter> to each
+     - spawn <BeeFight bee1 bee2>
+
+6. became_a_fighter. <RumbleBee> Added<BeeFighter>
+   - remove <Pathfinding>
+
+7. bee_fight. <BeeFight>, beez With<BeeFighter>
+   - after 5 secs:
+     bee1: remove <BeeFighter>
+     bee2: add <BeeKilled>
+
+8. bee_dead. Added<BeeKilled>
+- end despawn recursive.
+*/
+
 pub struct RumblebeePlugin;
 impl Plugin for RumblebeePlugin {
     fn build(&self, app: &mut App) {
@@ -27,13 +71,12 @@ impl Plugin for RumblebeePlugin {
                 Update,
                 (
                     birth_a_bee,
-                    set_unassigned_bees,
                     find_target,
-                    bee_fight_collisions,
-                    bee_egg_collisions,
+                    egg_collisions,
+                    fight_collisions,
                     bee_fight,
-                    big_bee_fight,
-                    bee_dead.after(find_target).after(bee_fight_collisions).after(bee_fight)
+                    became_a_fighter,
+                    bee_dead.after(find_target).after(became_a_fighter)
                 ).run_if(in_state(GameState::InGame)),
             );
     }
@@ -44,47 +87,81 @@ pub struct RumbleBee {
     pub faction: terrain::Faction,
 }
 
+// Container for grouping in Debug plugin
 #[derive(Component)]
-pub struct Beenitialized {
-    pub pos: Option<Vec2>
+struct BeeContainer;
+
+#[derive(Component)]
+struct BeeBorn {
+    pos: Option<Vec2>,
+    faction: Faction
 }
 
+// Punch arm
 #[derive(Component)]
-pub struct BeeFight;
+pub struct ArmAnim;
 
 #[derive(Component)]
-pub struct BeeKilled;
-
-
-#[derive(Component)]
-pub struct BigBeeFight {
-    pub bee1: Entity,
-    pub bee2: Entity,
+struct BeeFight {
+    bee1: Entity,
+    bee2: Entity,
     started: Instant
 }
 
 #[derive(Component)]
-pub struct BeeBorn {
-    pub pos: Option<Vec2>,
-    pub faction: Faction
+struct BeeFighter;
+
+#[derive(Component)]
+struct BeeKilled;
+
+fn rumblebee_setup(
+    mut commands: Commands,
+){
+    commands.spawn((SpatialBundle { ..default() }, BeeContainer, OnGameScreen))
+        .insert(Name::new("Beez"));
+
+    // Make the beez
+    let num_beez = 2;
+    for i in 0..num_beez {
+        // Spawn new bee spawn (added in birth_bee)
+        commands.spawn(BeeBorn {
+            pos: None,
+            faction: if i < num_beez / 2 { Faction::Blue } else { Faction::Red }
+        });
+    }
+
 }
 
 fn birth_a_bee(
     mut commands: Commands,
     assets: Res<AssetCol>,
     bees: Query<(Entity, &BeeBorn)>,
-    parent: Query<Entity, With<BeeContainer>>
+    parent: Query<Entity, With<BeeContainer>>,
+    tilemap: Query<(
+        &TilemapSize,
+        &TilemapGridSize,
+        &Navmesh,
+    ), Without<RumbleBee>>,
 ) {
+    let (map_size, grid_size, navmesh) = tilemap.single();
+    let mut rng = rand::thread_rng();
+
     for (ent, spawn) in bees.iter() {
 
-        commands.entity(ent).despawn();
+        commands.entity(ent).despawn(); // Remove the BeeBorn entity
 
-        let pos:Vec2 = spawn.pos.unwrap_or_else(|| Vec2::new(0.0,0.0));
+        let pos:Vec3 = spawn.pos.unwrap_or_else(|| {
+            let tile_pos = find_empty_tile(navmesh, map_size);
+            tilepos_to_px (&tile_pos, grid_size)
+        }).extend({
+            // Set pos and give bee it's z index
+            Layers::MIDGROUND + rng.gen_range(0..100) as f32
+        });
 
         let is_blue = if spawn.faction == Faction::Blue { true } else { false };
         let bee_sprite = SpriteSheetBundle {
             texture_atlas: assets.chars.clone(),
-            transform: Transform::from_scale(Vec3::splat(50.0/80.0)),
+            transform: Transform::from_translation(pos).with_scale(Vec3::splat(50.0/80.0)),
             sprite: TextureAtlasSprite::new(if is_blue {0} else {1}),
             ..default()
         };
@@ -97,12 +174,9 @@ fn birth_a_bee(
                     false => terrain::Faction::Red
                 }
             },
-            Beenitialized {
-                pos: spawn.pos,
-            },
             OnGameScreen,
             FollowPath {
-                end: pos,
+                end: pos.xy(),
                 done: true,
             },
             Speed { speed: RUMBLEBEE_SPEED },
@@ -116,7 +190,11 @@ fn birth_a_bee(
                 transform: Transform::from_xyz(0.,0., 0.01),
                 ..default()
             },
-            Army
+            ArmAnim,
+            AnimationIndices { frames: vec![1], cur: 0 },
+            AnimationTimer(
+                Timer::from_seconds(0.1, TimerMode::Repeating)
+            ),
         )).id();
 
         let eyes = commands.spawn((
@@ -150,93 +228,74 @@ fn birth_a_bee(
     }
 }
 
-// Punch arm
-#[derive(Component)]
-pub struct Army;
-
-#[derive(Component)]
-pub struct BeeContainer;
-
-fn rumblebee_setup(
+/// Set the bee's pathfinding to go to a target tile
+fn find_target(
     mut commands: Commands,
-){
-    commands.spawn((SpatialBundle { ..default() }, BeeContainer, OnGameScreen))
-        .insert(Name::new("Beez"));
-
-    // Make the beez
-    let num_beez = 2;
-    for i in 0..num_beez {
-        // Spawn new bee spawn (added in birth_bee)
-        commands.spawn(BeeBorn {
-            pos: None,
-            faction: if i < num_beez / 2 { Faction::Blue } else { Faction::Red }
-        });
-    }
-
-}
-
-fn set_unassigned_bees(
-    mut commands: Commands,
-    mut ent: Query<(Entity, &mut Transform, &Beenitialized), With<RumbleBee>>,
+    entity: Query<(Entity, &Transform, &RumbleBee),
+                  (Without<Pathfinding>, Without<BeeFighter>)>,
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
+        &TilemapType,
         &Navmesh,
-    ), Without<RumbleBee>>,
-){
-    if !tilemap.is_empty() {
-        let (map_size, grid_size, navmesh) = tilemap.single();
-        let mut rng = rand::thread_rng();
+    )>,
+    eggs: Query<(&Egg, &TilePos)>,
+) {
+    let (map_size, grid_size, map_type, navmesh) = tilemap.single();
+    for entity in entity.iter() {
+        let pos = &entity.1
+            .translation.xy()
+            // TODO: 25 is bee size / 2. Get from transform!
+            .sub(Vec2 { x:GAP_LEFT + 25.0, y: 25.0 });
+        let Some(entity_pos) =
+            TilePos::from_world_pos(pos, map_size, grid_size, map_type)
+        else {
+            //Why are some not getting world pos?
+            info!("Entity outside map {:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
+            continue;
+        };
 
-        for (ent, mut transform, beeinit) in ent.iter_mut() {
-            let pos:Vec2 = match beeinit.pos {
-                Some(pos) => pos,
-                None => {
-                    let mut target = TilePos { x: 0, y: 0 };
-                    let mut ok = false;
-                    while !ok {
-                        target.x = rng.gen_range(0..map_size.x);
-                        target.y = rng.gen_range(0..map_size.y);
-                        ok = !navmesh.solid(target);
-                    }
-                    Vec2 {
-                        x: target.x as f32 * grid_size.x + 25.0 + GAP_LEFT,
-                        y: target.y as f32 * grid_size.y + 25.0
+
+        let targets = eggs.iter().filter_map(|(egg, pos)| {
+            (egg.faction == entity.2.faction).then_some((egg, pos))
+        });
+
+        let mut target_path: Option<Pathfinding> = None;
+        // have a target egg - go to it!
+        if let Some(first) = targets.choose(&mut rand::thread_rng()) {
+            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, first.1.clone()) {
+                target_path = Some(path);
+            }
+        }
+
+        // No egg target, just wander to random spot
+        if target_path.is_none() {
+            // No target, just wander aimlessly
+            let mut rng = rand::thread_rng();
+            let mut ok = false;
+            let mut target = TilePos { x: 0, y: 0 };
+            while !ok {
+                target.x = rng.gen_range(0..map_size.x);
+                target.y = rng.gen_range(0..map_size.y);
+                if !navmesh.solid(target) {
+                    if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+                        target_path = Some(path);
+                        ok = true;
                     }
                 }
-            };
-
-            // Set pos and give bee it's z index
-            transform.translation =
-                pos.extend(Layers::MIDGROUND + rng.gen_range(0..100) as f32);
-
-            commands.entity(ent).remove::<Beenitialized>();
+            }
         }
-    }
-}
 
-fn bee_fight(
-    mut commands: Commands,
-    beez: Query<(Entity, &RumbleBee, &Transform, &Children), Added<BeeFight>>,
-    army: Query<Entity, With<Army>>,
-){
-    // Bees be fightin'.
-    for (ent, _bee, _transform, children) in beez.iter() {
-        commands.entity(ent)
-            .remove::<Pathfinding>();
-
-        for child in children {
-            if let Ok(army) = army.get(*child) {
-                commands.entity(army)
-                    .insert(AnimationIndices { frames: vec![0, 1], cur: 0 })
-                    .insert(AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)));
+        if let Some(path) = target_path {
+            if let Some(mut e) = commands.get_entity(entity.0) {
+                e.insert(path);
             }
         }
 
     }
 }
 
-fn bee_egg_collisions(
+fn egg_collisions(
     mut commands: Commands,
     beez: Query<(Entity, &RumbleBee, &Transform)>,
     mut eggs: Query<(Entity, &Egg, &mut Tile, &TilePos)>,
@@ -296,9 +355,9 @@ fn bee_egg_collisions(
     }
 }
 
-fn bee_fight_collisions(
+fn fight_collisions(
     mut commands: Commands,
-    beez: Query<(Entity, &RumbleBee, &Transform), (Without<BeeFight>, Without<Beenitialized>)>,
+    beez: Query<(Entity, &RumbleBee, &Transform), Without<BeeFighter>>,
     time: Res<Time>
 ){
     let entities: Vec<(Entity, &RumbleBee, &Transform)> = beez.iter().map(|(entity, rumblebee, transform)|
@@ -319,12 +378,12 @@ fn bee_fight_collisions(
             if a.distance(b) < 50.0 {
                 // GET READY TO BRUMBLE!
                 if let Some(mut e) = commands.get_entity(*ent_a) {
-                    e.insert(BeeFight);
+                    e.insert(BeeFighter);
                 }
                 if let Some(mut e) = commands.get_entity(*ent_b) {
-                    e.insert(BeeFight);
+                    e.insert(BeeFighter);
                 }
-                commands.spawn(BigBeeFight {
+                commands.spawn(BeeFight {
                     bee1: *ent_a,
                     bee2: *ent_b,
                     started: time.last_update().unwrap()
@@ -335,104 +394,72 @@ fn bee_fight_collisions(
 
 }
 
-/// Set the organisms pathfinding to go to the given tile.
-fn find_target(
+fn became_a_fighter(
     mut commands: Commands,
-    entity: Query<
-            (Entity, &Transform, &RumbleBee),
-        (Without<Pathfinding>, Without<BeeFight>, Without<Beenitialized>)>,
-    tilemap: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &TilemapType,
-        &Navmesh,
-    )>,
-    eggs: Query<(&Egg, &TilePos)>,
-) {
-    let (map_size, grid_size, map_type, navmesh) = tilemap.single();
-    for entity in entity.iter() {
-        let pos = &entity.1
-            .translation.xy()
-            // TODO: 25 is bee size / 2. Get from transform!
-            .sub(Vec2 { x:GAP_LEFT + 25.0, y: 25.0 });
-        let Some(entity_pos) =
-            TilePos::from_world_pos(pos, map_size, grid_size, map_type)
-        else {
-            //Why are some not getting world pos?
-            //info!("Entity outside map {:?} {} {}", &entity.1.translation.xy(), map_size.x as f32 * grid_size.x, map_size.y as f32 * grid_size.y);
-            continue;
-        };
+    beez: Query<(Entity, &RumbleBee, &Transform, &Children), Added<BeeFighter>>,
+    mut arms: Query<&mut AnimationIndices, With<ArmAnim>>,
+){
+    // Bee just got in a fight.
+    for (ent, _bee, _transform, children) in beez.iter() {
+        commands
+            .entity(ent)
+            .remove::<Pathfinding>();
 
-
-        let targets = eggs.iter().filter_map(|(egg, pos)| {
-            (egg.faction == entity.2.faction).then_some((egg, pos))
-        });
-
-        let mut target_path: Option<Pathfinding> = None;
-        // have a target egg - go to it!
-        if let Some(first) = targets.choose(&mut rand::thread_rng()) {
-            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, first.1.clone()) {
-                target_path = Some(path);
-            }
-        }
-
-        // No egg target, just wander to random spot
-        if target_path.is_none() {
-            // No target, just wander aimlessly
-            let mut rng = rand::thread_rng();
-            let mut ok = false;
-            let mut target = TilePos { x: 0, y: 0 };
-            while !ok {
-                target.x = rng.gen_range(0..map_size.x);
-                target.y = rng.gen_range(0..map_size.y);
-                ok = !navmesh.solid(target);
-            }
-
-            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
-                target_path = Some(path);
-            }
-
-        }
-
-        if let Some(path) = target_path {
-            if let Some(mut e) = commands.get_entity(entity.0) {
-                e.insert(path);
+        for child in children.iter() {
+            if let Ok(mut arm) = arms.get_mut(*child) {
+                arm.frames = vec![0, 1];
+                arm.cur = 0;
             }
         }
 
     }
-
 }
 
-
-fn big_bee_fight(
+fn bee_fight(
     mut commands: Commands,
-    mut ent: Query<(Entity, &mut BigBeeFight)>,
+    mut bee_fight: Query<&mut BeeFight>,
+    bees: Query<(Entity, &Children), With<BeeFighter>>,
+    mut arms: Query<&mut AnimationIndices, With<ArmAnim>>,
     time: Res<Time>,
-    bees: Query<Entity, With<BeeFight>>
 ){
-    for (fight, beefight) in ent.iter_mut() {
+    for beefight in bee_fight.iter_mut() {
         let t = time.last_update().unwrap() - beefight.started;
-        if t.as_secs() > 5 {
-            if bees.iter().any(|entity| entity == beefight.bee1) {
-                commands.entity(beefight.bee1).remove::<BeeFight>();
-            } else { info!("nop b1") }
-            if bees.iter().any(|entity| entity == beefight.bee2) {
-                commands
-                    .entity(beefight.bee2)
-                    .insert(BeeKilled);
-            } else { info!("nop b2") }
-            commands.entity(fight).despawn();
+        if t.as_secs() < 5 {
+            continue;
         }
+        for (bee, kids) in bees.iter() {
+            if bee == beefight.bee1 {
+                commands
+                    .entity(bee)
+                    .remove::<BeeFighter>();
+
+                for &child in kids.iter() {
+                    if let Ok(mut arm) = arms.get_mut(child) {
+                        arm.frames = vec![0];
+                        arm.cur = 0;
+                    }
+                }
+            }
+            if bee == beefight.bee2 {
+                if let Some(mut b) = commands.get_entity(bee) {
+                    b.insert(BeeKilled);
+                } else {
+                    info!("no bee2");
+                }
+            }
+        }
+
     }
 }
 
 fn bee_dead(
     mut commands: Commands,
-    mut ent: Query<(Entity, &Transform), With<BeeKilled>>,
+    mut ent: Query<(Entity, &Transform), Added<BeeKilled>>,
     assets: Res<AssetCol>
 ) {
     for (ent, pos) in ent.iter_mut() {
+        commands.entity(ent).despawn_recursive();
+
         // TODO: needs to set tilemap, not just be a sprite
         commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
@@ -452,6 +479,5 @@ fn bee_dead(
             sprite: TextureAtlasSprite::new(38),
             ..default()
         }, OnGameScreen));
-        commands.entity(ent).despawn_recursive();
     }
 }

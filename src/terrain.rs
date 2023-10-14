@@ -82,6 +82,25 @@ impl Tile {
     }
 }
 
+pub fn find_empty_tile(navmesh:&Navmesh, map_size:&TilemapSize) -> TilePos {
+    let mut rng = rand::thread_rng();
+    let mut target = TilePos { x: 0, y: 0 };
+    let mut ok = false;
+    while !ok {
+        target.x = rng.gen_range(0..map_size.x);
+        target.y = rng.gen_range(0..map_size.y);
+        ok = !navmesh.solid(target);
+    }
+    return target
+}
+
+pub fn tilepos_to_px(tilepos: &TilePos, grid_size: &TilemapGridSize) -> Vec2 {
+    Vec2 {
+        x: tilepos.x as f32 * grid_size.x + 25.0 + GAP_LEFT,
+        y: tilepos.y as f32 * grid_size.y + 25.0
+    }
+}
+
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
