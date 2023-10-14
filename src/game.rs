@@ -12,6 +12,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(OnEnter(GameState::InGame), game_setup)
+            .add_event::<GotAnEgg>()
             .add_systems(
                 Update,
                 (
@@ -22,6 +23,7 @@ impl Plugin for GamePlugin {
                     animate_sprite,
                     update_sprite,
                     bevy::window::close_on_esc,
+                    egg_listener
                 )
                     .run_if(in_state(GameState::InGame)),
             )
@@ -61,8 +63,17 @@ pub struct AnimationIndices {
 pub struct AnimationTimer(pub Timer);
 
 #[derive(Resource)]
-struct GameData {
-    tiles: usize,
+pub struct GameData {
+    pub eggs_spawned: usize,
+}
+
+#[derive(Event, Default)]
+pub struct GotAnEgg;
+
+fn egg_listener(mut events: EventReader<GotAnEgg>, mut game_data: ResMut<GameData>) {
+    for _ in events.iter() {
+        game_data.eggs_spawned += 1;
+    }
 }
 
 fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, Option<&Displacement>, With<Bob>)>) {
@@ -119,6 +130,8 @@ fn game_setup(
 ) {
     let window: &Window = window_query.get_single().unwrap();
 
+    commands.insert_resource(GameData { eggs_spawned: 0 });
+
     /*audio
         .play(assets.tune.clone())
         .loop_from(0.0)
@@ -157,6 +170,7 @@ fn game_setup(
         OnGameScreen,
     ));
 
+    // Exit button
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -171,9 +185,7 @@ fn game_setup(
     ));
 
     commands.spawn((
-        // Create a TextBundle that has a Text with a single section.
         TextBundle::from_section(
-            // Accepts a `String` or any type that converts into a `String`, such as `&str`
             "exit",
             TextStyle {
                 font: assets.font.clone(),
@@ -182,7 +194,6 @@ fn game_setup(
             },
         ) // Set the alignment of the Text
         .with_text_alignment(TextAlignment::Center)
-        // Set the style of the TextBundle itself.
         .with_style(Style {
             position_type: PositionType::Absolute,
             bottom: Val::Px(30.0),
@@ -192,9 +203,6 @@ fn game_setup(
         OnGameScreen,
     ));
 
-
-
-    commands.insert_resource(GameData { tiles: 1 });
 }
 
 #[derive(Component)]

@@ -1,6 +1,6 @@
 use crate::game::{
     OnGameScreen, Speed, Bob, Displacement,
-    AnimationTimer, AnimationIndices
+    AnimationTimer, AnimationIndices, GotAnEgg
 };
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
@@ -302,6 +302,7 @@ fn egg_collisions(
     mut eggs: Query<(Entity, &Egg, &mut Tile, &TilePos)>,
     tilemap: Query<(&TileStorage, &TilemapSize, &TilemapGridSize)>,
     mut tile_query: Query<&mut Tile, Without<Egg>>,
+    mut got_egg_event: EventWriter<GotAnEgg>,
 ){
     let (tile_storage, map_size, grid_size) = tilemap.single();
 
@@ -315,6 +316,7 @@ fn egg_collisions(
 
             if bee_pos.translation.distance(pos) < 20.0 && bee.faction == egg.faction {
                 // Got a egg..
+                got_egg_event.send_default();
                 commands.entity(egg_ent).remove::<Egg>();
                 *egg_tile = Tile::Air;
 

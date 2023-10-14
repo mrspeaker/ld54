@@ -1,4 +1,5 @@
 use crate::AssetCol;
+use crate::game::GameData;
 use crate::game::OnGameScreen;
 use crate::prelude::*;
 use crate::GameState;
@@ -55,13 +56,14 @@ fn ui_setup(
 }
 
 fn update_ui(
-    inv: Res<Inventory>,
-    mut ui_dirt: Query<&mut Text, With<UIDirtAmount>>
+    //inv: Res<Inventory>,
+    mut ui_dirt: Query<&mut Text, With<UIDirtAmount>>,
+    game_data: Res<GameData>
 ) {
-    if inv.is_changed() {
-        let dirts: u32 = inv.dirt;
-        for mut text in &mut ui_dirt {
-            text.sections[0].value = format!("{}", dirts);
-        }
+    //if inv.is_changed() {
+        //let dirts: u32 = inv.dirt;
+    for mut text in &mut ui_dirt {
+        text.sections[0].value = format!("{}", game_data.eggs_spawned);
     }
+    //}
 }
