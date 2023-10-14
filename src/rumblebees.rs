@@ -57,11 +57,12 @@ Update:
 
 7. bee_fight. <BeeFight>, beez With<BeeFighter>
    - after 5 secs:
+     despawn <BeeFight>
      bee1: remove <BeeFighter>
      bee2: add <BeeKilled>
 
 8. bee_dead. Added<BeeKilled>
-- end despawn recursive.
+   - despawn recursive.
 */
 
 pub struct RumblebeePlugin;
@@ -78,7 +79,7 @@ impl Plugin for RumblebeePlugin {
                     fight_collisions,
                     bee_fight,
                     became_a_fighter,
-                    bee_dead.after(find_target).after(bee_fight)
+                    bee_dead,
                 ).run_if(in_state(GameState::InGame)),
             );
     }
@@ -193,7 +194,7 @@ fn birth_a_bee(
                 ..default()
             },
             ArmAnim,
-            AnimationIndices { frames: vec![1], cur: 0 },
+            AnimationIndices { frames: vec![0], cur: 0 },
             AnimationTimer(
                 Timer::from_seconds(0.1, TimerMode::Repeating)
             ),
@@ -419,16 +420,18 @@ fn became_a_fighter(
 
 fn bee_fight(
     mut commands: Commands,
-    mut bee_fight: Query<&mut BeeFight>,
+    mut bee_fight: Query<(Entity, &mut BeeFight)>,
     bees: Query<(Entity, &Children), With<BeeFighter>>,
     mut arms: Query<&mut AnimationIndices, With<ArmAnim>>,
     time: Res<Time>,
 ){
-    for beefight in bee_fight.iter_mut() {
+    for (fight_ent, beefight) in bee_fight.iter_mut() {
         let t = time.last_update().unwrap() - beefight.started;
         if t.as_secs() < 5 {
             continue;
         }
+        commands.entity(fight_ent).despawn();
+
         for (bee, kids) in bees.iter() {
             if bee == beefight.bee1 {
                 commands
@@ -437,6 +440,7 @@ fn bee_fight(
 
                 for &child in kids.iter() {
                     if let Ok(mut arm) = arms.get_mut(child) {
+                        // Back to no anim
                         arm.frames = vec![0];
                         arm.cur = 0;
                     }
@@ -445,8 +449,6 @@ fn bee_fight(
             if bee == beefight.bee2 {
                 if let Some(mut b) = commands.get_entity(bee) {
                     b.insert(BeeKilled);
-                } else {
-                    info!("no bee2");
                 }
             }
         }
