@@ -60,7 +60,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: "LD54".into(),
+                    title: "Rumblebees".into(),
                     canvas: Some("#game".to_owned()),
                     resolution: (500.0 * 2.0, 300.0 * 2.0).into(),
                     fit_canvas_to_parent: false,
