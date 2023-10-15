@@ -11,7 +11,7 @@ use rand::seq::SliceRandom;
 use crate::AssetCol;
 use crate::GameState;
 use crate::Layers;
-use crate::game::OnGameScreen;
+use crate::game::{OnGameScreen,GameData};
 use crate::pathfinding::{
     Navmesh,
     update_navmesh_on_tile_change,
@@ -355,6 +355,7 @@ fn highlight_tile(
     mut inv: ResMut<Inventory>,
     assets: Res<AssetCol>,
     audio: Res<Audio>,
+    game_data: Res<GameData>
 ) {
     let (map_size, grid_size, map_type, tile_storage, map_transform) = tilemap_q.single_mut();
 
@@ -378,6 +379,11 @@ fn highlight_tile(
         let mut cursor_pos = cursor.single_mut();
         cursor_pos.translation.x = tile_pos.x as f32 * grid_size.x + GAP_LEFT + TILE_SIZE / 2.0;
         cursor_pos.translation.y = tile_pos.y as f32 * grid_size.y + GAP_BOTTOM + TILE_SIZE / 2.0;
+
+        // Don't draw if game over
+        if game_data.game_over {
+            return;
+        }
 
         if let Ok(mut tile) = tile_q.get_mut(tile_entity) {
             // Update the tile texture and pointer
@@ -459,8 +465,13 @@ fn spawn_plant(
     topsoil: Query<(Entity, &TilePos), With<Topsoil>>,
     tile_query: Query<&Tile>,
     time: Res<Time>,
-    mut plant_spawner: ResMut<PlantSpawner>
+    mut plant_spawner: ResMut<PlantSpawner>,
+    game_data: Res<GameData>
 ) {
+    if game_data.game_over {
+        return;
+    }
+
     plant_spawner.tick(time.delta());
     if !plant_spawner.finished() {
         return;

@@ -65,15 +65,22 @@ pub struct AnimationTimer(pub Timer);
 #[derive(Resource)]
 pub struct GameData {
     pub eggs_spawned: usize,
+    pub game_started: bool,
+    pub game_over: bool
 }
 
 #[derive(Event, Default)]
 pub struct GotAnEgg;
 
-fn egg_listener(mut events: EventReader<GotAnEgg>, mut game_data: ResMut<GameData>) {
+fn egg_listener(
+    mut events: EventReader<GotAnEgg>,
+    mut game_data: ResMut<GameData>)
+{
     for _ in events.iter() {
         game_data.eggs_spawned += 1;
+        game_data.game_started = true; // Can't get 0 lol.
     }
+
 }
 
 fn move_bob(time: Res<Time>, mut pos: Query<(&mut Transform, Option<&Displacement>, With<Bob>)>) {
@@ -130,7 +137,11 @@ fn game_setup(
 ) {
     let window: &Window = window_query.get_single().unwrap();
 
-    commands.insert_resource(GameData { eggs_spawned: 0 });
+    commands.insert_resource(GameData {
+        eggs_spawned: 0,
+        game_started: false,
+        game_over: false
+    });
 
     /*audio
         .play(assets.tune.clone())
@@ -233,7 +244,6 @@ fn move_with_keys(
         }
     }
 }
-
 
 fn check_exit(
     pointer: Res<Pointer>,

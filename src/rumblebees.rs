@@ -1,6 +1,6 @@
 use crate::game::{
     OnGameScreen, Speed, Bob, Displacement,
-    AnimationTimer, AnimationIndices, GotAnEgg
+    AnimationTimer, AnimationIndices, GotAnEgg, GameData
 };
 use crate::AssetCol;
 use crate::pathfinding::FollowPath;
@@ -153,7 +153,7 @@ fn birth_a_bee(
         &TilemapSize,
         &TilemapGridSize,
         &Navmesh,
-    ), Without<RumbleBee>>,
+    ), Without<RumbleBee>>
 ) {
     let (map_size, grid_size, navmesh) = tilemap.single();
     let mut rng = rand::thread_rng();
@@ -182,8 +182,8 @@ fn birth_a_bee(
             bee_sprite,
             RumbleBee {
                 faction: match is_blue {
-                    true => terrain::Faction::Blue,
-                    false => terrain::Faction::Red
+                    true => Faction::Blue,
+                    false => Faction::Red
                 }
             },
             OnGameScreen,
@@ -236,8 +236,8 @@ fn birth_a_bee(
         if let Ok(beez) = parent.get_single() {
             commands.entity(beez).push_children(&[bee]);
         }
-
     }
+
 }
 
 /// Set the bee's pathfinding to go to a target tile
@@ -312,7 +312,12 @@ fn egg_collisions(
     tilemap: Query<(&TileStorage, &TilemapSize, &TilemapGridSize)>,
     mut tile_query: Query<&mut Tile, Without<Egg>>,
     mut got_egg_event: EventWriter<GotAnEgg>,
+    game_data: Res<GameData>
 ){
+    if game_data.game_over {
+        return;
+    }
+
     let (tile_storage, map_size, grid_size) = tilemap.single();
 
     for (_bee_ent, bee, bee_pos) in beez.iter() {
@@ -462,7 +467,9 @@ fn bee_fight(
 fn bee_dead(
     mut commands: Commands,
     mut ent: Query<(Entity, &Transform), Added<BeeKilled>>,
-    assets: Res<AssetCol>
+    all_beez: Query<&RumbleBee, Without<BeeKilled>>,
+    assets: Res<AssetCol>,
+    mut game_data: ResMut<GameData>
 ) {
     for (ent, pos) in ent.iter_mut() {
         commands.entity(ent).despawn_recursive();
@@ -487,5 +494,21 @@ fn bee_dead(
             sprite: TextureAtlasSprite::new(38),
             ..default()
         }, OnGameScreen));
+    }
+
+    // Is it game over?
+    let mut blue = 0;
+    let mut red = 0;
+    for bee in all_beez.iter() {
+        if bee.faction == Faction::Blue {
+            blue += 1;
+        }
+        if bee.faction == Faction::Red {
+            red += 1;
+        }
+    }
+    if (blue == 0 || red == 0) && game_data.game_started {
+        // Game over!
+        game_data.game_over = true;
     }
 }
