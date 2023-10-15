@@ -74,11 +74,18 @@ pub struct GotAnEgg;
 
 fn egg_listener(
     mut events: EventReader<GotAnEgg>,
-    mut game_data: ResMut<GameData>)
-{
+    mut game_data: ResMut<GameData>,
+    assets: Res<AssetCol>,
+    audio: Res<Audio>,
+) {
+    let got_egg = events.len() > 0;
     for _ in events.iter() {
         game_data.eggs_spawned += 1;
         game_data.game_started = true; // Can't get 0 lol.
+    }
+
+    if got_egg {
+        audio.play(assets.blip.clone()).with_volume(0.8);
     }
 
 }
