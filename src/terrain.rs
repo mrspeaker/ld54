@@ -26,8 +26,6 @@ pub const TILE_SIZE: f32 = 40.0;
 pub const GAP_LEFT: f32 = TILE_SIZE * 2.0;
 pub const GAP_BOTTOM: f32 = TILE_SIZE * 0.0;
 
-const MAX_PLANT_HEIGHT: u8 = 3;
-
 #[derive(Component, Copy, Clone, Debug)]
 pub enum Tile {
     Air,
@@ -294,19 +292,19 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
 
 fn get_tile_from_ascii(pos: TilePos, size: TilemapSize) -> Tile {
     let tilemap = b"\
-    .1.....................\
-    .t.....................\
-    .t..................###\
-    ######............##...\
-    ................##.....\
-    ............2.........#\
-    ....#####...t....#####%\
-    .a..........t.b........\
-    ##.........####........\
-    L.#..............###...\
+    .......................\
+    .1................2....\
+    .t................t....\
+    .t.......####.....#####\
+    #####..................\
+    .......................\
+    ....##...........#####%\
+    .........a..b..........\
+    ##.......####..........\
+    ..#..............###...\
     ...#...................\
     .......................\
-    ###......a..........###\
+    ###.................###\
     %%%#################%XX\
     XXXXXXXXXXXXXXXXXXXXXXX";
 
@@ -470,23 +468,22 @@ fn spawn_plant(
 
     let (tile_storage, map_size) = tilemap_query.single_mut();
 
-    let mut possible_plants: Vec<(Entity, Vec<(Entity, bool)>)> = vec![];
+    let mut possible_plants: Vec<(Entity, Vec<Entity>)> = vec![];
 
     for (topsoil_ent, topsoil_pos) in &topsoil {
         let mut pos = *topsoil_pos;
-        let mut plant_stack: Vec<(Entity, bool)> = vec![];
+        let mut plant_stack: Vec<Entity> = vec![];
         let mut rng = rand::thread_rng();
-        let height = rng.gen_range(1..MAX_PLANT_HEIGHT+1);
-        for i in 1..=height {
+        let height = rng.gen_range(1..=3);
+        for _ in 1..=height {
             if let Some(newpos) =
                 Neighbors::get_square_neighboring_positions(&pos, map_size, false).north
             {
-                let is_top = i == height;
                 pos = newpos;
                 if let Some(plant_ent) = tile_storage.get(&pos) {
                     if let Ok(tile) = tile_query.get(plant_ent) {
                         match tile {
-                            Tile::Air => plant_stack.push((plant_ent, is_top)),
+                            Tile::Air => plant_stack.push(plant_ent),
                             _ => break,
                         }
                     }
@@ -499,13 +496,17 @@ fn spawn_plant(
             possible_plants.push((topsoil_ent, plant_stack));
         }
     }
+
     if let Some((soil_ent, plant_stack)) = possible_plants.choose(&mut rand::thread_rng()) {
         commands.entity(*soil_ent).insert(Tile::Dirt {
             topsoil: false,
             style: 5,
         });
-        for (plant_ent, is_top) in plant_stack {
-            if *is_top {
+        // Add stalks and egg
+        let egg_spot = plant_stack.len() - 1;
+        let mut i = 0;
+        for plant_ent in plant_stack {
+            if i == egg_spot {
                 let mut rng = rand::thread_rng();
                 let is_blue = rng.gen_bool(0.5);
                 commands.entity(*plant_ent).insert((
@@ -523,6 +524,7 @@ fn spawn_plant(
                     Tile::Stalk { style: 0 }
                 ));
             }
+            i+=1;
         }
     }
 }

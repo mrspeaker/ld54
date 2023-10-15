@@ -124,14 +124,23 @@ fn rumblebee_setup(
         .insert(Name::new("Beez"));
 
     // Make the beez
-    let num_beez = 2;
+    /*let num_beez = 2;
     for i in 0..num_beez {
         // Spawn new bee spawn (added in birth_bee)
         commands.spawn(BeeBorn {
             pos: None,
             faction: if i < num_beez / 2 { Faction::Blue } else { Faction::Red }
         });
-    }
+}*/
+    commands.spawn(BeeBorn {
+        pos: Some(Vec2 { x: 580.0, y: 300.0 }),
+        faction: Faction::Blue
+    });
+    commands.spawn(BeeBorn {
+        pos: Some(Vec2 { x: 460.0, y: 300.0 }),
+        faction: Faction::Red
+    });
+
 
 }
 
@@ -465,7 +474,7 @@ fn bee_dead(
             transform: Transform::from_xyz(
                 pos.translation.x.floor(),
                 pos.translation.y.floor(),
-                Layers::MIDGROUND).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
+                Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
             sprite: TextureAtlasSprite::new(37),
             ..default()
         }, OnGameScreen));
@@ -474,7 +483,7 @@ fn bee_dead(
             transform: Transform::from_xyz(
                 pos.translation.x.floor() + 20.0,
                 pos.translation.y.floor(),
-                Layers::MIDGROUND).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
+                Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
             sprite: TextureAtlasSprite::new(38),
             ..default()
         }, OnGameScreen));
