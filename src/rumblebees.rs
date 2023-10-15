@@ -332,7 +332,10 @@ fn egg_collisions(
                 // Got a egg..
                 got_egg_event.send_default();
                 commands.entity(egg_ent).remove::<Egg>();
-                *egg_tile = Tile::Stalk { style: 2 };
+                // Egg turns into a un-passable stalk.
+                // Should it? Maybe just Air to make it easier
+                *egg_tile = Tile::Air;
+                //*egg_tile = Tile::Stalk { style: 2 };
 
                 // Spawn new bee
                 commands.spawn(BeeBorn {
@@ -340,9 +343,12 @@ fn egg_collisions(
                     faction: egg.faction
                 });
 
-                // Turn stalks to dead.
+
                 let mut next_pos = egg_pos.clone();
                 let mut is_stalk = true;
+                let mut is_top = true;
+
+                // Walk down the stalk, turning the tree dead
                 while is_stalk {
                     let down_pos = Neighbors::get_square_neighboring_positions(&next_pos, map_size, false).south;
                     match down_pos {
@@ -352,12 +358,21 @@ fn egg_collisions(
                                     match &mut *tile {
                                         Tile::Stalk { style } => {
                                             if *style == 0 {
-                                                *style = 1;
+                                                *style = if is_top { 2 } else { 1 };
+                                                is_top = false;
                                             }
                                             next_pos = down_pos;
                                         },
                                         _ => {
                                             is_stalk = false;
+                                            // Is it only a 1-high tree?
+                                            if is_top {
+                                                // Yep, make it a dead stalk (instead of air)
+                                                // good rule? Otherwise making 1-high would
+                                                // be dominant strat
+                                                *egg_tile = Tile::Stalk { style: 2 };
+                                            }
+
                                         },
                                     }
                                 }
