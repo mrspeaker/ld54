@@ -81,16 +81,32 @@ impl Tile {
     }
 }
 
-pub fn find_empty_tile(navmesh:&Navmesh, map_size:&TilemapSize) -> TilePos {
+pub fn find_empty_tile(navmesh:&Navmesh, map_size:&TilemapSize) -> Option<TilePos> {
     let mut rng = rand::thread_rng();
+    let mut free_spots:Vec<(u32,u32)> = vec![];
+
+    // TODO: woah, super inefficient calcing this every call.
     let mut target = TilePos { x: 0, y: 0 };
-    let mut ok = false;
-    while !ok {
-        target.x = rng.gen_range(0..map_size.x);
-        target.y = rng.gen_range(0..map_size.y);
-        ok = !navmesh.solid(target);
+    for j in 0..map_size.y {
+        for i in 0..map_size.x {
+            target.x = i;
+            target.y = j;
+            if !navmesh.solid(target) {
+                free_spots.push((i, j));
+            }
+        }
     }
-    return target
+
+    if let Some(spot) = free_spots.choose(&mut rng) {
+        // we got one.
+        target.x = spot.0;
+        target.y = spot.1;
+        return Some(target);
+    } else {
+        // No free spots. What to do?
+        info!("no free spots");
+    }
+    return None;
 }
 
 pub fn tilepos_to_px(tilepos: &TilePos, grid_size: &TilemapGridSize) -> Vec2 {

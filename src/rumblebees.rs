@@ -162,10 +162,15 @@ fn birth_a_bee(
 
         commands.entity(ent).despawn(); // Remove the BeeBorn entity
 
-        let pos:Vec3 = spawn.pos.unwrap_or_else(|| {
-            let tile_pos = find_empty_tile(navmesh, map_size);
-            tilepos_to_px (&tile_pos, grid_size)
-        }).extend({
+        let pos_given = spawn.pos
+            .or_else(|| find_empty_tile(navmesh, map_size)
+                     .map(|pos| tilepos_to_px (&pos, grid_size)));
+
+        if pos_given.is_none() {
+            // Couldn't find a place!
+            continue;
+        }
+        let pos = pos_given.unwrap().extend({
             // Set pos and give bee it's z index
             Layers::MIDGROUND + rng.gen_range(0..100) as f32
         });
@@ -252,6 +257,7 @@ fn find_target(
         &Navmesh,
     )>,
     eggs: Query<(&Egg, &TilePos)>,
+    mut game_data: ResMut<GameData>
 ) {
     let (map_size, grid_size, map_type, navmesh) = tilemap.single();
     for entity in entity.iter() {
@@ -285,6 +291,32 @@ fn find_target(
             // No target, just wander aimlessly
             let mut rng = rand::thread_rng();
             let mut ok = false;
+            let mut retries = 20;
+            while !ok {
+                if let Some(t)  = find_empty_tile(navmesh, map_size) {
+                    if let Some(path) = Pathfinding::astar(navmesh, entity_pos, t) {
+                        target_path = Some(path);
+                        ok = true;
+                    } else {
+                        // Found a free spot, but can't get to it.
+                        retries -= 1;
+                        if retries < 0 {
+                            // Not sure...
+                            //info!("No where to go!");
+                            ok = true;
+                        }
+                    }
+                } else {
+                    // No paths left. Game over?
+                   game_data.game_over = true;
+                }
+            }
+            if retries < 0 {
+                // Didn't find a path
+                continue;
+            }
+
+
             let mut target = TilePos { x: 0, y: 0 };
             while !ok {
                 target.x = rng.gen_range(0..map_size.x);
