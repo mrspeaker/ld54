@@ -392,32 +392,26 @@ fn fight_collisions(
     beez: Query<(Entity, &RumbleBee, &Transform), Without<BeeFighter>>,
     time: Res<Time>
 ){
-    let entities: Vec<(Entity, &RumbleBee, &Transform)> = beez.iter().map(|(entity, rumblebee, transform)|
-        (entity, rumblebee, transform)
-    ).collect();
-
-    let num = entities.len();
-    for i in 0..num {
-        let (ent_a, bee_a, pos_a) = &entities[i];
-
-        for j in i + 1..num {
-            let (ent_b, bee_b, pos_b) = &entities[j];
-            if bee_a.faction == bee_b.faction {
-                continue;
-            }
-            let a = pos_a.translation.xy();
-            let b = pos_b.translation.xy();
-            if a.distance(b) < 50.0 {
-                // GET READY TO BRUMBLE!
-                commands.entity(*ent_a).insert(BeeFighter);
-                commands.entity(*ent_b).insert(BeeFighter);
-                commands.spawn(BeeFight {
-                    bee1: *ent_a,
-                    bee2: *ent_b,
-                    started: time.last_update().unwrap()
-                });
-            }
+    for [
+        (ent_a, bee_a, pos_a),
+        (ent_b, bee_b, pos_b)
+    ] in beez.iter_combinations() {
+        if bee_a.faction == bee_b.faction {
+            continue;
         }
+        let a = pos_a.translation.xy();
+        let b = pos_b.translation.xy();
+        if a.distance(b) < 50.0 {
+            // GET READY TO BRUMBLE!
+            commands.entity(ent_a).insert(BeeFighter);
+            commands.entity(ent_b).insert(BeeFighter);
+            commands.spawn(BeeFight {
+                bee1: ent_a,
+                bee2: ent_b,
+                started: time.last_update().unwrap()
+            });
+        }
+
     }
 
 }
