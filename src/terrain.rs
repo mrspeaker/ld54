@@ -45,6 +45,7 @@ impl Tile {
             Self::Dirt { style, .. } if *style > 3 => 18,
             Self::Dirt { style, .. } => u32::from(*style) + 1,
             Self::Rock { style } => u32::from(*style) + 11,
+            Self::Stalk { style } if *style == 2 => 41,
             Self::Stalk { style } => u32::from(*style) + 8,
             Self::Leaves { style } => u32::from(*style) + 7,
             Self::Poo { style } => u32::from(*style) + 48,

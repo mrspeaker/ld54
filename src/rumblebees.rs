@@ -332,7 +332,7 @@ fn egg_collisions(
                 // Got a egg..
                 got_egg_event.send_default();
                 commands.entity(egg_ent).remove::<Egg>();
-                *egg_tile = Tile::Air;
+                *egg_tile = Tile::Stalk { style: 2 };
 
                 // Spawn new bee
                 commands.spawn(BeeBorn {
