@@ -429,16 +429,16 @@ fn highlight_tile(
             return;
         }
 
-        if let Ok(mut tile) = tile_q.get_mut(tile_entity) {
+        if let Ok((mut tile, mut health)) = tile_q.get_mut(tile_entity) {
             // Update the tile texture and pointer
-            pointer.set_active_item(*tile.0);
+            pointer.set_active_item(*tile);
 
-            if pointer.is_down && tile.0.texture() != pointer.tile.texture() {
-                let (did_draw, _dirts) = draw_tile(&pointer.tile, &tile.0, inv.dirt);
+            if pointer.is_down && tile.texture() != pointer.tile.texture() {
+                let (did_draw, _dirts) = draw_tile(&pointer.tile, &tile, inv.dirt);
                 if did_draw {
                     // inv.dirt = dirts; TODO: not using inventory system anymore
-                    *tile.0 = pointer.tile;
-                    tile.1.0 = 100; // Reset tile Health
+                    *tile = pointer.tile;
+                    health.0 = 100; // Reset tile Health
 
                     // Play some noise
                     audio.play(assets.blip.clone()).with_volume(0.3);

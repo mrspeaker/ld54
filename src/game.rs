@@ -391,15 +391,15 @@ fn smash_dirt_when_stuck(
         stuck.last_dig = t;
 
         let mut tile_done = false;
-        if let Ok(mut tile) = tiles.get_mut(stuck.tile) {
-            tile.1.0 = tile.1.0.saturating_sub(25); // Kill some dirt HP.
-            let hp = tile.1.0;
+        if let Ok((mut tile, mut health, mut color)) = tiles.get_mut(stuck.tile) {
+            health.0 = health.0.saturating_sub(25); // Kill some dirt HP.
+            let hp = health.0;
             if hp == 0 {
-                *tile.0 = Tile::Air;
+                *tile = Tile::Air;
                 tile_done = true;
-                tile.2.0.set_a(100.);
+                color.0.set_a(100.);
             } else {
-                tile.2.0.set_a(hp as f32 / 100.);
+                color.0.set_a(hp as f32 / 100.);
             }
         } else {
             tile_done = true;
