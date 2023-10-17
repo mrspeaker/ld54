@@ -374,24 +374,38 @@ fn check_if_stuck_in_tile(
     }
 }
 
-/// When bee is stuck in dirt, smash out after some time
+/// When entity is stuck in dirt, smash out after some time
 fn smash_dirt_when_stuck(
     mut commands: Commands,
-    mut ents: Query<(Entity, &Stuck)>,
-    mut tiles: Query<(&mut Tile, &mut Health)>,
+    mut ents: Query<(Entity, &mut Stuck)>,
+    mut tiles: Query<(&mut Tile, &mut Health, &mut TileColor)>,
     time: Res<Time>
 ) {
 
-    for (entity, stuck) in ents.iter_mut() {
-        let t = time.last_update().unwrap() - stuck.last_dig;
-        if t.as_secs() < 2 {
+    for (entity, mut stuck) in ents.iter_mut() {
+        let t = time.last_update().unwrap();
+        let dt = t - stuck.last_dig;
+        if dt.as_secs_f32() < 0.5 {
             continue;
         }
+        stuck.last_dig = t;
 
-        // Smashed a dirt!
-        if let Ok(mut th) = tiles.get_mut(stuck.tile) {
-            *(th.0) = Tile::Air;
+        let mut tile_done = false;
+        if let Ok(mut tile) = tiles.get_mut(stuck.tile) {
+            tile.1.0 = tile.1.0.saturating_sub(25); // Kill some dirt HP.
+            let hp = tile.1.0;
+            if hp == 0 {
+                *tile.0 = Tile::Air;
+                tile_done = true;
+            } else {
+                tile.2.0.set_a(hp as f32 / 100.);
+            }
+        } else {
+            tile_done = true;
         }
-        commands.entity(entity).remove::<Stuck>();
+
+        if tile_done {
+            commands.entity(entity).remove::<Stuck>();
+        }
     }
 }

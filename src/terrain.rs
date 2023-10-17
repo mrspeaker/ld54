@@ -207,7 +207,7 @@ pub struct Terrarium;
 struct PlantSpawner(Timer);
 
 #[derive(Component)]
-pub struct Health(u8);
+pub struct Health(pub u8);
 
 fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load("img/tiles.png");
@@ -395,8 +395,8 @@ fn highlight_tile(
         ),
         Without<Cursor>,
     >,
-    mut tile_q: Query<&mut Tile>, // Every tile? Is that necessary?
-    mut inv: ResMut<Inventory>,
+    mut tile_q: Query<&mut Tile>,
+    inv: Res<Inventory>, // TODO: not using this anymore
     assets: Res<AssetCol>,
     audio: Res<Audio>,
     game_data: Res<GameData>
@@ -434,7 +434,7 @@ fn highlight_tile(
             pointer.set_active_item(*tile);
 
             if pointer.is_down && tile.texture() != pointer.tile.texture() {
-                let (did_draw, dirts) = draw_tile(&pointer.tile, &tile, inv.dirt);
+                let (did_draw, _dirts) = draw_tile(&pointer.tile, &tile, inv.dirt);
                 if did_draw {
                     // inv.dirt = dirts; TODO: not using inventory system anymore
                     *tile = pointer.tile;
