@@ -1,14 +1,7 @@
-use std::{mem::MaybeUninit, fmt::Debug, ops::{Sub, Add}};
-use bevy::math::swizzles::Vec3Swizzles;
+use std::mem::MaybeUninit;
 
-use crate::{prelude::*, game::{Speed,Displacement}, terrain::{GAP_LEFT, Tile}};
+use crate::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-
-#[derive(Component)]
-pub struct FollowPath {
-    pub end: Vec2,
-    pub done: bool,
-}
 
 /// A an entity that can or cannot be navigated through while pathfinding.
 #[derive(Component)]
@@ -151,73 +144,5 @@ impl Iterator for Successors {
         let i = unsafe { self.nodes[self.index].assume_init_read() };
         self.index += 1;
         Some((i, 1))
-    }
-}
-
-pub fn follow_path(
-    time: Res<Time>,
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut Pathfinding, &mut Transform, &Speed, Option<&mut Displacement>), With<FollowPath>>,
-    tilemap: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &TilemapType,
-        &TileStorage,
-        &Navmesh,
-    )>,
-) {
-    /// Distance to the target considered "at" the target.
-    const TARGET_EPSILON: f32 = 5.0;
-    let (_map_size, grid_size, map_type, _storage, _navmesh) = tilemap.single();
-    let delta_time = time.delta_seconds().min(0.3);
-    if delta_time > 0.2 {
-        info!(">>> dt");
-    }
-    for (entity, mut path, mut transform, speed, displacement) in &mut query {
-        //TODO: get size from entity
-        let target = path.current(grid_size, map_type).add(Vec2 { x: GAP_LEFT + 25., y: 25. });
-
-        let delta =
-            target.sub(transform.translation.xy()).normalize() * delta_time * speed.speed;
-
-        if let Some(mut displacement) = displacement {
-            displacement.0 = delta;
-        }
-        transform.translation += delta.extend(0.0);
-        if transform.translation.xy().distance(target) < TARGET_EPSILON && !path.step() {
-            commands.entity(entity).remove::<Pathfinding>();
-        }
-    }
-}
-
-pub fn update_navmesh_on_tile_change(
-    mut tile_query: Query<(&Tile, &TilePos), Or<(Added<Tile>, Changed<Tile>)>>,
-    mut navmesh: Query<&mut Navmesh>
-) {
-    for (tile, tile_pos) in &mut tile_query {
-        navmesh.get_single_mut().unwrap().set_solid(*tile_pos, match tile {
-            // TODO: this logic is repeated several times!
-            Tile::Air => false,
-            Tile::Egg { .. } => false,
-            _ => true
-        });
-    }
-}
-
-pub fn remove_conflicting_paths_on_tile_change(
-    mut commands: Commands,
-    mut tile_query: Query<(&Tile, &TilePos), Changed<Tile>>,
-    path: Query<(Entity, &mut Pathfinding), With<FollowPath>>,
-) {
-    for (tile, tile_pos) in &mut tile_query {
-        if Tile::is_solid(*tile) {
-            // We drawing, invalidate any crossing paths
-            for (ent, path) in path.iter() {
-                if path.path.contains(tile_pos) {
-                    commands.entity(ent).remove::<Pathfinding>();
-                }
-            }
-
-        }
     }
 }

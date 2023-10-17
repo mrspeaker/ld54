@@ -1,9 +1,8 @@
 use crate::game::{
     OnGameScreen, Speed, Bob, Displacement,
-    AnimationTimer, AnimationIndices, GotAnEgg, GameData
+    AnimationTimer, AnimationIndices, GotAnEgg, GameData, NavmeshPair, FollowPath
 };
 use crate::AssetCol;
-use crate::pathfinding::FollowPath;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use rand::seq::IteratorRandom;
 use crate::terrain::{GAP_LEFT, Tile, Egg, Faction, tilepos_to_px, find_empty_tile};
@@ -152,7 +151,7 @@ fn birth_a_bee(
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
-        &Navmesh,
+        &NavmeshPair,
     ), Without<RumbleBee>>
 ) {
     let (map_size, grid_size, navmesh) = tilemap.single();
@@ -163,7 +162,7 @@ fn birth_a_bee(
         commands.entity(ent).despawn(); // Remove the BeeBorn entity
 
         let pos_given = spawn.pos
-            .or_else(|| find_empty_tile(navmesh, map_size)
+            .or_else(|| find_empty_tile(&navmesh.main, map_size)
                      .map(|pos| tilepos_to_px (&pos, grid_size)));
 
         if pos_given.is_none() {
@@ -254,7 +253,7 @@ fn find_target(
         &TilemapSize,
         &TilemapGridSize,
         &TilemapType,
-        &Navmesh,
+        &NavmeshPair,
     )>,
     eggs: Query<(&Egg, &TilePos)>,
     mut game_data: ResMut<GameData>
@@ -273,16 +272,32 @@ fn find_target(
             continue;
         };
 
-
         let targets = eggs.iter().filter_map(|(egg, pos)| {
             (egg.faction == entity.2.faction).then_some((egg, pos))
         });
 
         let mut target_path: Option<Pathfinding> = None;
-        // have a target egg - go to it!
+        // Choose an egg to target: just random, should be "closest"
         if let Some(first) = targets.choose(&mut rand::thread_rng()) {
-            if let Some(path) = Pathfinding::astar(navmesh, entity_pos, first.1.clone()) {
+            if let Some(path) = Pathfinding::astar(&navmesh.main, entity_pos, first.1.clone()) {
                 target_path = Some(path);
+            } else {
+                // Find the neearest dirt tile that is blocking path to egg
+                if let Some(mut path) = Pathfinding::astar(&navmesh.alt, entity_pos, first.1.clone()) {
+                    // Get path to dirt
+                    let mut p: Vec<TilePos> = vec![];
+                    while path.step() {
+                        let pos = path.path[path.at];
+                        p.push(pos);
+                        if navmesh.main.solid(pos) {
+                            // hit dirt
+                            break;
+                        }
+                    }
+                    if p.len() > 0 {
+                        target_path = Some(Pathfinding { path: p, at: 0 });
+                    }
+                }
             }
         }
 
@@ -293,8 +308,8 @@ fn find_target(
             let mut ok = false;
             let mut retries = 20;
             while !ok {
-                if let Some(t)  = find_empty_tile(navmesh, map_size) {
-                    if let Some(path) = Pathfinding::astar(navmesh, entity_pos, t) {
+                if let Some(t)  = find_empty_tile(&navmesh.main, map_size) {
+                    if let Some(path) = Pathfinding::astar(&navmesh.main, entity_pos, t) {
                         target_path = Some(path);
                         ok = true;
                     } else {
@@ -321,8 +336,8 @@ fn find_target(
             while !ok {
                 target.x = rng.gen_range(0..map_size.x);
                 target.y = rng.gen_range(0..map_size.y);
-                if !navmesh.solid(target) {
-                    if let Some(path) = Pathfinding::astar(navmesh, entity_pos, target) {
+                if !&navmesh.main.solid(target) {
+                    if let Some(path) = Pathfinding::astar(&navmesh.main, entity_pos, target) {
                         target_path = Some(path);
                         ok = true;
                     }

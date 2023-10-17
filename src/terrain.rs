@@ -6,17 +6,17 @@ use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
 use rand::Rng;
+use rand::seq::IteratorRandom;
 use rand::seq::SliceRandom;
 
 use crate::AssetCol;
 use crate::GameState;
 use crate::Layers;
+use crate::game::NavmeshPair;
+use crate::game::remove_conflicting_paths_on_tile_change;
+use crate::game::update_navmesh_on_tile_change;
 use crate::game::{OnGameScreen,GameData};
-use crate::pathfinding::{
-    Navmesh,
-    update_navmesh_on_tile_change,
-    remove_conflicting_paths_on_tile_change,
-};
+use crate::pathfinding::Navmesh;
 use crate::inventory::Inventory;
 use crate::pointer::{Pointer, update_pointer};
 
@@ -83,9 +83,10 @@ impl Tile {
 
 pub fn find_empty_tile(navmesh:&Navmesh, map_size:&TilemapSize) -> Option<TilePos> {
     let mut rng = rand::thread_rng();
-    let mut free_spots:Vec<(u32,u32)> = vec![];
 
-    // TODO: woah, super inefficient calcing this every call.
+    // Find a list of non-slid tiles
+    // TODO: This is very inefficient - re-calculated every call.
+    let mut free_spots:Vec<(u32,u32)> = vec![];
     let mut target = TilePos { x: 0, y: 0 };
     for j in 0..map_size.y {
         for i in 0..map_size.x {
@@ -116,6 +117,14 @@ pub fn tilepos_to_px(tilepos: &TilePos, grid_size: &TilemapGridSize) -> Vec2 {
     }
 }
 
+pub fn px_to_tilepos(pos: Vec2, grid_size: &TilemapGridSize) -> TilePos {
+    TilePos {
+        x: (pos.x / grid_size.x as f32) as u32,
+        y: (pos.y / grid_size.y as f32) as u32,
+    }
+}
+
+
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
@@ -129,6 +138,7 @@ impl Plugin for TerrainPlugin {
                 update_navmesh_on_tile_change.after(update_tile),
                 remove_conflicting_paths_on_tile_change.after(update_tile),
                 spawn_plant,
+                // tick_tiles
             ).run_if(in_state(GameState::InGame)));
     }
 }
@@ -196,6 +206,9 @@ pub struct Terrarium;
 #[derive(Resource, Deref, DerefMut)]
 struct PlantSpawner(Timer);
 
+#[derive(Component)]
+pub struct Health(u8);
+
 fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let texture = assets.load("img/tiles.png");
 
@@ -206,6 +219,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(map_size);
     let mut navmesh =  Navmesh::new(map_size.x, map_size.y);
+    let mut navmesh_no_dirt = Navmesh::new(map_size.x, map_size.y);
 
     let mut tiles = Vec::new();
 
@@ -223,6 +237,12 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
             navmesh.set_solid(tile_pos, match tile {
                 Tile::Air => false,
                 Tile::Egg { .. } => false,
+                _ => true
+            });
+            navmesh_no_dirt.set_solid(tile_pos, match tile {
+                Tile::Air => false,
+                Tile::Egg { .. } => false,
+                Tile::Dirt { .. } => false,
                 _ => true
             });
             tiles.push(tile_entity);
@@ -262,7 +282,10 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
             ..Default::default()
         },
         TileOffset(1),
-        navmesh
+        NavmeshPair {
+            main: navmesh,
+            alt: navmesh_no_dirt
+        }
     ));
 
     commands.spawn((
@@ -283,8 +306,10 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
         texture_index: TileTextureIndex(tile.texture()),
         ..Default::default()
     };
+    let health = Health(100);
+
     match tile {
-        Tile::Dirt { topsoil: true, .. } => commands.spawn((tbundle, Topsoil, tile)),
+        Tile::Dirt { topsoil: true, .. } => commands.spawn((tbundle, Topsoil, tile, health)),
         Tile::Stalk { .. } => commands.spawn((
             tbundle,
             Plant {
@@ -292,6 +317,7 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
                 status: PlantStatus::Growing,
             },
             tile,
+            health,
         )),
         Tile::Egg { style } => {
             commands.spawn((
@@ -299,10 +325,11 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
                 Egg {
                     faction: if style == 0 { Faction::Red } else { Faction::Blue }
                 },
-                tile))
+                tile,
+                health))
         },
-        Tile::Air | Tile::Unknown => commands.spawn((tbundle, tile)),
-        _ => commands.spawn((tbundle, tile)),
+        Tile::Air | Tile::Unknown => commands.spawn((tbundle, tile, health)),
+        _ => commands.spawn((tbundle, tile, health)),
     }
     .id()
 }
@@ -409,7 +436,7 @@ fn highlight_tile(
             if pointer.is_down && tile.texture() != pointer.tile.texture() {
                 let (did_draw, dirts) = draw_tile(&pointer.tile, &tile, inv.dirt);
                 if did_draw {
-                    inv.dirt = dirts;
+                    // inv.dirt = dirts; TODO: not using inventory system anymore
                     *tile = pointer.tile;
 
                     // Play some noise
@@ -444,6 +471,27 @@ fn update_tile(
             }
             _ => (),
         };
+    }
+}
+
+
+fn tick_tiles(
+    mut tile_query: Query<(&mut TileColor, &mut Tile, &mut Health)>,
+) {
+    if let Some((mut sprite, mut tile, mut health)) = tile_query.iter_mut().choose(&mut rand::thread_rng()) {
+        match *tile {
+            Tile::Dirt {..} => {
+                health.0 -= 10;
+                if health.0 > 50 {
+                    sprite.0.set_a(health.0 as f32 / 100.);
+                } else {
+                    *tile = Tile::Air;
+                    sprite.0.set_a(1.0);
+                    health.0 = 100;
+                }
+            },
+            _ => ()
+        }
     }
 }
 
