@@ -3,6 +3,7 @@ use crate::game::{
     AnimationTimer, AnimationIndices, GotAnEgg, GameData, NavmeshPair, FollowPath
 };
 use crate::AssetCol;
+use crate::settings::{RUMBLEBEE_SPEED_MAX, RUMBLEBEE_PER_EGG_SPEEDUP_PERC, RUMBLEBEE_SPEED_START, RUMBLEBEE_SPEED_VARIANCE};
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use rand::seq::IteratorRandom;
 use crate::terrain::{GAP_LEFT, Tile, Egg, Faction, tilepos_to_px, find_empty_tile};
@@ -14,8 +15,6 @@ use rand::Rng;
 use std::ops::Sub;
 
 use crate::Layers;
-
-const RUMBLEBEE_SPEED: f32 = 50.0;
 
 /*
 Systems:
@@ -152,7 +151,8 @@ fn birth_a_bee(
         &TilemapSize,
         &TilemapGridSize,
         &NavmeshPair,
-    ), Without<RumbleBee>>
+    ), Without<RumbleBee>>,
+    mut game_data: ResMut<GameData>
 ) {
     let (map_size, grid_size, navmesh) = tilemap.single();
     let mut rng = rand::thread_rng();
@@ -160,6 +160,13 @@ fn birth_a_bee(
     for (ent, spawn) in bees.iter() {
 
         commands.entity(ent).despawn(); // Remove the BeeBorn entity
+
+        // Speed up a bit every bee
+        game_data.bee_base_speed =
+            game_data.bee_base_speed +
+            ((RUMBLEBEE_SPEED_MAX - RUMBLEBEE_SPEED_START)
+             * RUMBLEBEE_PER_EGG_SPEEDUP_PERC)
+            .min(RUMBLEBEE_SPEED_MAX); // Cap it to max
 
         let pos_given = spawn.pos
             .or_else(|| find_empty_tile(&navmesh.main, map_size)
@@ -195,7 +202,9 @@ fn birth_a_bee(
                 end: pos.xy(),
                 done: true,
             },
-            Speed { speed: rng.gen_range(RUMBLEBEE_SPEED * 0.8 .. RUMBLEBEE_SPEED * 1.2) },
+            Speed { speed: rng.gen_range(
+                game_data.bee_base_speed * (1.0 - RUMBLEBEE_SPEED_VARIANCE) ..
+                    game_data.bee_base_speed * (1.0 + RUMBLEBEE_SPEED_VARIANCE)) },
             Bob,
             Displacement(Vec2 { x: 0., y: 0. }),
         )).id();
@@ -536,27 +545,26 @@ fn bee_dead(
         commands.entity(ent).despawn_recursive();
 
         // Add some bones
-        /*
         // TODO: needs to set tilemap, not just be a sprite
+        let size = 40.0;
         commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
             transform: Transform::from_xyz(
                 pos.translation.x.floor(),
                 pos.translation.y.floor(),
-                Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
+                Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.4, y: 0.8, z: 1.0 }),
             sprite: TextureAtlasSprite::new(37),
             ..default()
         }, OnGameScreen));
         commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
             transform: Transform::from_xyz(
-                pos.translation.x.floor() + 20.0,
+                pos.translation.x.floor() + size * 0.4,
                 pos.translation.y.floor(),
-                Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
+                Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.4, y: 0.8, z: 1.0 }),
             sprite: TextureAtlasSprite::new(38),
             ..default()
          }, OnGameScreen));
-        */
     }
 
     // Is it game over?

@@ -18,12 +18,30 @@ use crate::game::{OnGameScreen,GameData};
 use crate::pathfinding::Navmesh;
 use crate::inventory::Inventory;
 use crate::pointer::{Pointer, update_pointer};
+use crate::settings::EGG_SPAWN_TIME;
 
 pub const MAP_COLS: u32 = 23;
 pub const MAP_ROWS: u32 = 15;
 pub const TILE_SIZE: f32 = 40.0;
 pub const GAP_LEFT: f32 = TILE_SIZE * 2.0;
 pub const GAP_BOTTOM: f32 = TILE_SIZE * 0.0;
+
+// Some egg-spawing-order ideas to try
+pub enum EggFactionMode {
+    Random,
+    FlipFlopNoGreen,
+    RandomNoGreen,
+    Sequence,
+    PingPong
+}
+
+// Some egg-spawning-timing
+pub enum EggSpawnMode {
+    Constant,
+    Random,
+    SpeedUp,
+    BeeBased
+}
 
 #[derive(Component, Copy, Clone, Debug)]
 pub enum Tile {
@@ -123,7 +141,6 @@ pub fn px_to_tilepos(pos: Vec2, grid_size: &TilemapGridSize) -> TilePos {
     }
 }
 
-
 pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
@@ -132,11 +149,11 @@ impl Plugin for TerrainPlugin {
             .add_systems(OnEnter(GameState::InGame), terrain_setup)
             .add_systems(First, update_pointer)
             .add_systems(Update, (
+                spawn_plant,
                 highlight_tile,
                 update_tile,
                 update_navmesh_on_tile_change.after(update_tile),
                 remove_conflicting_paths_on_tile_change.after(update_tile),
-                spawn_plant,
             ).run_if(in_state(GameState::InGame)));
     }
 }
@@ -248,7 +265,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     }
 
     commands.insert_resource(PlantSpawner(
-        Timer::new(Duration ::from_secs(6), TimerMode::Repeating),
+        Timer::new(Duration ::from_secs_f32(EGG_SPAWN_TIME), TimerMode::Repeating),
     ));
 
     commands.spawn(OnGameScreen)

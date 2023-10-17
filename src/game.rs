@@ -1,6 +1,7 @@
 use std::ops::{Add, Sub};
 use crate::pathfinding::{Pathfinding, Navmesh};
 use crate::pointer::Pointer;
+use crate::settings::{RUMBLEBEE_SPEED_START, DIG_REPEAT_IN_SECS, DIG_POWER};
 use crate::terrain::{GAP_LEFT, px_to_tilepos, Health};
 use crate::{despawn_screen, GameState, AssetCol};
 use bevy::math::Vec3Swizzles;
@@ -96,7 +97,8 @@ pub struct AnimationTimer(pub Timer);
 pub struct GameData {
     pub eggs_spawned: usize,
     pub game_started: bool,
-    pub game_over: bool
+    pub game_over: bool,
+    pub bee_base_speed: f32
 }
 
 #[derive(Event, Default)]
@@ -111,7 +113,8 @@ fn egg_listener(
     let got_egg = events.len() > 0;
     for _ in events.iter() {
         game_data.eggs_spawned += 1;
-        game_data.game_started = true; // Can't get 0 lol.
+        game_data.game_started = true; // Can't get 0 total lol.
+                                       // Not sure where "game_started" could be set.
     }
 
     if got_egg {
@@ -177,7 +180,8 @@ fn game_setup(
     commands.insert_resource(GameData {
         eggs_spawned: 0,
         game_started: false,
-        game_over: false
+        game_over: false,
+        bee_base_speed: RUMBLEBEE_SPEED_START
     });
 
     /*audio
@@ -385,14 +389,14 @@ fn smash_dirt_when_stuck(
     for (entity, mut stuck) in ents.iter_mut() {
         let t = time.last_update().unwrap();
         let dt = t - stuck.last_dig;
-        if dt.as_secs_f32() < 0.5 {
+        if dt.as_secs_f32() < DIG_REPEAT_IN_SECS {
             continue;
         }
         stuck.last_dig = t;
 
         let mut tile_done = false;
         if let Ok((mut tile, mut health, mut color)) = tiles.get_mut(stuck.tile) {
-            health.0 = health.0.saturating_sub(25); // Kill some dirt HP.
+            health.0 = health.0.saturating_sub(DIG_POWER); // Kill some dirt HP.
             let hp = health.0;
             if hp == 0 {
                 *tile = Tile::Air;

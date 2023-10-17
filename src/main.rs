@@ -14,6 +14,7 @@ pub mod terrain;
 pub mod pointer;
 pub mod inventory;
 pub mod rumblebees;
+pub mod settings;
 
 use std::sync::OnceLock;
 
