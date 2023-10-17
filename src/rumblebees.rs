@@ -273,7 +273,7 @@ fn find_target(
         };
 
         let targets = eggs.iter().filter_map(|(egg, pos)| {
-            (egg.faction == entity.2.faction).then_some((egg, pos))
+            (match_faction(entity.2.faction, egg.faction)).then_some((egg, pos))
         });
 
         let mut target_path: Option<Pathfinding> = None;
@@ -352,6 +352,10 @@ fn find_target(
     }
 }
 
+fn match_faction (a: Faction, b: Faction) -> bool {
+    a == b || b == Faction::Green
+}
+
 fn egg_collisions(
     mut commands: Commands,
     beez: Query<(Entity, &RumbleBee, &Transform)>,
@@ -375,7 +379,8 @@ fn egg_collisions(
                 z: bee_pos.translation.z
             };
 
-            if bee_pos.translation.distance(pos) < 20.0 && bee.faction == egg.faction {
+            if match_faction(bee.faction, egg.faction) &&
+                bee_pos.translation.distance(pos) < 20.0 {
                 // Got a egg..
                 got_egg_event.send_default();
                 commands.entity(egg_ent).remove::<Egg>();
@@ -387,7 +392,7 @@ fn egg_collisions(
                 // Spawn new bee
                 commands.spawn(BeeBorn {
                     pos: Some(pos.xy().clone()),
-                    faction: egg.faction
+                    faction: bee.faction
                 });
 
 
@@ -531,6 +536,7 @@ fn bee_dead(
         commands.entity(ent).despawn_recursive();
 
         // Add some bones
+        /*
         // TODO: needs to set tilemap, not just be a sprite
         commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
@@ -549,7 +555,8 @@ fn bee_dead(
                 Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.5, y: 1.0, z: 1.0 }),
             sprite: TextureAtlasSprite::new(38),
             ..default()
-        }, OnGameScreen));
+         }, OnGameScreen));
+        */
     }
 
     // Is it game over?

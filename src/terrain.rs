@@ -6,7 +6,6 @@ use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
 use rand::Rng;
-use rand::seq::IteratorRandom;
 use rand::seq::SliceRandom;
 
 use crate::AssetCol;
@@ -131,29 +130,28 @@ impl Plugin for TerrainPlugin {
         app.add_plugins(TilemapPlugin)
             .init_resource::<Pointer>()
             .add_systems(OnEnter(GameState::InGame), terrain_setup)
-            .add_systems(First, update_pointer)//).chain())//).chain())
+            .add_systems(First, update_pointer)
             .add_systems(Update, (
                 highlight_tile,
                 update_tile,
                 update_navmesh_on_tile_change.after(update_tile),
                 remove_conflicting_paths_on_tile_change.after(update_tile),
                 spawn_plant,
-                // tick_tiles
             ).run_if(in_state(GameState::InGame)));
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Faction {
-    Green,
-    Blue,
     Red,
+    Blue,
+    Green
 }
 impl Faction {
     const FACTIONS: &'static [Self] = &[
         Self::Red,
+        Self::Blue,
         Self::Green,
-        Self::Red,
     ];
     #[must_use]
     pub fn random() -> Self {
@@ -313,7 +311,7 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
         Tile::Stalk { .. } => commands.spawn((
             tbundle,
             Plant {
-                ptype: Faction::Red,
+                ptype: Faction::Green,
                 status: PlantStatus::Growing,
             },
             tile,
@@ -322,9 +320,11 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
         Tile::Egg { style } => {
             commands.spawn((
                 tbundle,
-                Egg {
-                    faction: if style == 0 { Faction::Red } else { Faction::Blue }
-                },
+                Egg { faction: match style {
+                    0 => Faction::Red,
+                    1 => Faction::Blue,
+                    _ => Faction::Green
+                }},
                 tile,
                 health))
         },
@@ -475,27 +475,6 @@ fn update_tile(
     }
 }
 
-
-fn tick_tiles(
-    mut tile_query: Query<(&mut TileColor, &mut Tile, &mut Health)>,
-) {
-    if let Some((mut sprite, mut tile, mut health)) = tile_query.iter_mut().choose(&mut rand::thread_rng()) {
-        match *tile {
-            Tile::Dirt {..} => {
-                health.0 -= 10;
-                if health.0 > 50 {
-                    sprite.0.set_a(health.0 as f32 / 100.);
-                } else {
-                    *tile = Tile::Air;
-                    sprite.0.set_a(1.0);
-                    health.0 = 100;
-                }
-            },
-            _ => ()
-        }
-    }
-}
-
 pub fn draw_tile(
     pointer_tile: &Tile,
     tile: &Tile,
@@ -582,20 +561,24 @@ fn spawn_plant(
         // Add stalks and egg
         let egg_spot = plant_stack.len() - 1;
         let mut i = 0;
+        let faction = Faction::random();
+
         for plant_ent in plant_stack {
             if i == egg_spot {
-                let mut rng = rand::thread_rng();
-                let is_blue = rng.gen_bool(0.5);
+                //let mut rng = rand::thread_rng();
+                //let is_blue = rng.gen_bool(0.5);
                 commands.entity(*plant_ent).insert((
-                    Egg {
-                        faction: if is_blue { Faction::Blue } else { Faction::Red }
-                    },
-                    Tile::Egg { style: if is_blue { 1 } else { 0 }  }
+                    Egg { faction },
+                    Tile::Egg { style: match faction {
+                        Faction::Red => 0,
+                        Faction::Blue => 1,
+                        _ => 2
+                    }}
                 ));
             } else {
                 commands.entity(*plant_ent).insert((
                     Plant {
-                        ptype: Faction::Red,
+                        ptype: faction,
                         status: PlantStatus::Growing,
                     },
                     Tile::Stalk { style: 0 }
