@@ -397,6 +397,7 @@ fn smash_dirt_when_stuck(
             if hp == 0 {
                 *tile.0 = Tile::Air;
                 tile_done = true;
+                tile.2.0.set_a(100.);
             } else {
                 tile.2.0.set_a(hp as f32 / 100.);
             }
