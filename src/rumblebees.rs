@@ -168,6 +168,8 @@ fn birth_a_bee(
              * RUMBLEBEE_PER_EGG_SPEEDUP_PERC)
             .min(RUMBLEBEE_SPEED_MAX); // Cap it to max
 
+        screen_print!(sec: 5.0, "bee base speed: {:?}", game_data.bee_base_speed);
+
         let pos_given = spawn.pos
             .or_else(|| find_empty_tile(&navmesh.main, map_size)
                      .map(|pos| tilepos_to_px (&pos, grid_size)));

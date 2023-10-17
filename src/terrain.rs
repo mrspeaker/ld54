@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use bevy::math::Vec4Swizzles;
 use bevy::prelude::*;
+use bevy_debug_text_overlay::screen_print;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_kira_audio::prelude::*;
@@ -18,7 +19,11 @@ use crate::game::{OnGameScreen,GameData};
 use crate::pathfinding::Navmesh;
 use crate::inventory::Inventory;
 use crate::pointer::{Pointer, update_pointer};
-use crate::settings::EGG_SPAWN_TIME;
+use crate::settings::{
+    EGG_SPAWN_TIME_START,
+    EGG_SPAWN_TIME_END,
+    EGG_SPAWN_SPEEDUP_PERC
+};
 
 pub const MAP_COLS: u32 = 23;
 pub const MAP_ROWS: u32 = 15;
@@ -224,7 +229,10 @@ struct PlantSpawner(Timer);
 #[derive(Component)]
 pub struct Health(pub u8);
 
-fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
+fn terrain_setup(
+    mut commands: Commands,
+    assets: Res<AssetServer>
+) {
     let texture = assets.load("img/tiles.png");
 
     let map_size = TilemapSize {
@@ -265,7 +273,7 @@ fn terrain_setup(mut commands: Commands, assets: Res<AssetServer>) {
     }
 
     commands.insert_resource(PlantSpawner(
-        Timer::new(Duration ::from_secs_f32(EGG_SPAWN_TIME), TimerMode::Repeating),
+        Timer::new(Duration ::from_secs_f32(EGG_SPAWN_TIME_START), TimerMode::Repeating),
     ));
 
     commands.spawn(OnGameScreen)
@@ -528,7 +536,7 @@ fn spawn_plant(
     tile_query: Query<&Tile>,
     time: Res<Time>,
     mut plant_spawner: ResMut<PlantSpawner>,
-    game_data: Res<GameData>
+    mut game_data: ResMut<GameData>
 ) {
     if game_data.game_over {
         return;
@@ -538,6 +546,14 @@ fn spawn_plant(
     if !plant_spawner.finished() {
         return;
     }
+
+    // Speed up egg spawner
+    let speed = (game_data.egg_spawn_time -
+        ((EGG_SPAWN_TIME_START - EGG_SPAWN_TIME_END) * EGG_SPAWN_SPEEDUP_PERC))
+        .max(EGG_SPAWN_TIME_END);
+    plant_spawner.set_duration(Duration ::from_secs_f32(speed));
+    game_data.egg_spawn_time = speed;
+    screen_print!(sec: 5.0, "Egg spawn speed: {:?}", speed);
 
     let (tile_storage, map_size) = tilemap_query.single_mut();
 
