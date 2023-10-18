@@ -288,7 +288,14 @@ fn find_target(
         });
 
         let mut target_path: Option<Pathfinding> = None;
-        // Choose an egg to target: just random, should be "closest"
+
+        /*
+        TODO: Choose an egg to target: just random, should be "closest"
+        1. for each target, look for a path. get the shortest.
+        2. if no target, check again for non-dirt path, choose shortest.
+        3. if none, wander.
+        */
+
         if let Some(first) = targets.choose(&mut rand::thread_rng()) {
             if let Some(path) = Pathfinding::astar(&navmesh.main, entity_pos, first.1.clone()) {
                 target_path = Some(path);
@@ -474,9 +481,7 @@ fn fight_collisions(
                 started: time.last_update().unwrap()
             });
         }
-
     }
-
 }
 
 fn became_a_fighter(

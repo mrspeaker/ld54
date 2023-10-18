@@ -146,11 +146,13 @@ fn update_sprite(
     mut query: Query<(&mut Transform, Option<&Displacement>)>
 ) {
     for (mut transform, displacement) in query.iter_mut() {
+        // Face the direction you are moving.
         if let Some(displacement) = displacement {
             if displacement.0.x != 0.0 {
                 transform.scale.x = transform.scale.x.abs() * if displacement.0.x < 0.0 { -1.0 } else { 1.0 };
             }
         }
+        // TODO: clamp position inside screen (stop Bob from pushing to outside tile)
     }
 }
 
