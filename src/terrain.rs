@@ -484,9 +484,12 @@ fn highlight_tile(
 
 fn update_tile(
     mut commands: Commands,
-    mut tile_query: Query<(Entity, &mut TileTextureIndex, &Tile), Or<(Added<Tile>, Changed<Tile>)>>,
+    mut tilemap: Query<(&TileStorage, &TilemapSize)>,
+    mut tile_query: Query<(Entity, &mut TileTextureIndex, &Tile, &TilePos), Or<(Added<Tile>, Changed<Tile>)>>,
 ) {
-    for (ent, mut tile_texture, tile) in &mut tile_query {
+    let (_storage, map_size) = tilemap.single_mut();
+
+    for (ent, mut tile_texture, tile, pos) in &mut tile_query {
         tile_texture.0 = tile.texture();
         match tile {
             Tile::Dirt { topsoil: false, .. } => {
@@ -497,6 +500,10 @@ fn update_tile(
             }
             _ => (),
         };
+
+        // TODO: autotile
+         let _n = Neighbors::get_square_neighboring_positions(&pos, map_size, true);
+        // let ne = n.entities(storage);
     }
 }
 

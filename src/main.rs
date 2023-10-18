@@ -4,6 +4,8 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::needless_pass_by_value)]
 
+extern crate console_error_panic_hook;
+
 mod debug;
 pub mod game;
 pub mod logo;
@@ -138,6 +140,8 @@ fn setup(
         transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
         ..default()
     });
+
+    console_error_panic_hook::set_once();
 }
 
 fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
