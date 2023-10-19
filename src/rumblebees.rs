@@ -397,10 +397,6 @@ fn egg_collisions(
     mut got_egg_event: EventWriter<GotAnEgg>,
     game_data: Res<GameData>
 ){
-    if game_data.game_over {
-        return;
-    }
-
     let (tile_storage, map_size, grid_size) = tilemap.single();
 
     for (_bee_ent, bee, bee_pos) in beez.iter() {
@@ -412,10 +408,17 @@ fn egg_collisions(
             };
 
             if match_faction(bee.faction, egg.faction) &&
-                bee_pos.translation.distance(pos) < 20.0 {
+                bee_pos.translation.distance(pos) < 20.0
+            {
                 // Got a egg..
-                got_egg_event.send_default();
                 commands.entity(egg_ent).remove::<Egg>();
+
+                if game_data.game_over {
+                    return;
+                }
+                got_egg_event.send_default();
+
+
                 // Egg turns into a un-passable stalk.
                 // Should it? Maybe just Air to make it easier
                 *egg_tile = Tile::Air;
