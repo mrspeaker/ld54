@@ -6,7 +6,7 @@ use crate::AssetCol;
 use crate::settings::{RUMBLEBEE_SPEED_MAX, RUMBLEBEE_PER_EGG_SPEEDUP_PERC, RUMBLEBEE_SPEED_START, RUMBLEBEE_SPEED_VARIANCE};
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use rand::seq::IteratorRandom;
-use crate::terrain::{GAP_LEFT, Tile, Egg, Faction, tilepos_to_px, find_empty_tile};
+use crate::terrain::{GAP_LEFT, Tile, Egg, Faction, tilepos_to_px, find_empty_tile, px_to_tilepos};
 use crate::{prelude::*, GameState};
 use bevy::math::swizzles::Vec3Swizzles;
 use bevy::prelude::*;
@@ -562,13 +562,36 @@ fn bee_fight(
 
 fn bee_dead(
     mut commands: Commands,
-    mut ent: Query<(Entity, &Transform), Added<BeeKilled>>,
+    mut ent: Query<(Entity, &RumbleBee, &Transform), Added<BeeKilled>>,
     all_beez: Query<&RumbleBee, Without<BeeKilled>>,
-    assets: Res<AssetCol>,
+    //assets: Res<AssetCol>,
+    tilemap: Query<(&TileStorage, &TilemapGridSize)>,
+    mut tile_query: Query<&mut Tile, Without<Egg>>,
     mut game_data: ResMut<GameData>
 ) {
-    for (ent, pos) in ent.iter_mut() {
+    let (tile_storage, grid_size) = tilemap.single();
+
+    for (ent, bee, pos) in ent.iter_mut() {
         commands.entity(ent).despawn_recursive();
+
+        // Get tile pos.
+        let tp = px_to_tilepos(pos.translation.xy().sub(Vec2 { x: GAP_LEFT, y: 0.0 }), grid_size);
+
+        if let Some(tile_ent) = tile_storage.get(&tp) {
+            if let Ok(mut tile) = tile_query.get_mut(tile_ent) {
+                *tile = Tile::Poo { style: if bee.faction == Faction::Blue { 1 } else { 0 } };
+            }
+        }
+
+        /*commands.spawn((SpriteSheetBundle {
+            texture_atlas: assets.tiles.clone(),
+            transform: Transform::from_xyz(
+                tpx.x,
+                tpx.y,
+                Layers::MIDGROUND - 1.0),
+            sprite: TextureAtlasSprite::new(37),
+            ..default()
+        }, OnGameScreen));
 
         // Add some bones
         // TODO: needs to set tilemap, not just be a sprite
@@ -590,7 +613,7 @@ fn bee_dead(
                 Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.4, y: 0.8, z: 1.0 }),
             sprite: TextureAtlasSprite::new(38),
             ..default()
-         }, OnGameScreen));
+         }, OnGameScreen));*/
     }
 
     // Is it game over?
@@ -608,6 +631,7 @@ fn bee_dead(
         game_data.game_started &&
         !game_data.game_over
     {
+        info!("whattt game oer");
         // Game over!
         game_data.game_over = true;
         commands.spawn(GameOver);

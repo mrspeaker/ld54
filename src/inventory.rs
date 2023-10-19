@@ -3,6 +3,7 @@ use crate::game::GameData;
 use crate::game::OnGameScreen;
 use crate::prelude::*;
 use crate::GameState;
+use crate::terrain::GAP_LEFT;
 
 pub const DIRT_AMOUNT:u32 = 64;
 
@@ -38,7 +39,27 @@ fn ui_setup(
             DIRT_AMOUNT.to_string(),
             TextStyle {
                 font: assets.font.clone(),
-                font_size: 50.0,
+                font_size: 40.0,
+                color: Color::BLACK,
+                ..default()
+            },
+        )
+            .with_text_alignment(TextAlignment::Center)
+            .with_style(Style {
+                position_type: PositionType::Absolute,
+                left: Val::Px(18.0),
+                top: Val::Px(18.0),
+                ..default()
+            }),
+        UIDirtAmount));
+
+    commands.spawn((
+        OnGameScreen,
+        TextBundle::from_section(
+            DIRT_AMOUNT.to_string(),
+            TextStyle {
+                font: assets.font.clone(),
+                font_size: 40.0,
                 color: Color::WHITE,
                 ..default()
             },

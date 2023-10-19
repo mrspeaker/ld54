@@ -30,18 +30,6 @@ fn splash_setup(
 
     commands.insert_resource(SplashTimer(Timer::from_seconds(5.0, TimerMode::Once)));
 
-    // Background image
-    commands.spawn((
-        SpriteBundle {
-            texture: assets.bg.clone(),
-            transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0)
-                .with_scale(Vec3::new(1.7, 1.4, 0.0)),
-            ..default()
-        },
-        OnSplashScreen,
-    ));
-
-    // Character sprite
     commands.spawn((
         SpriteBundle {
             texture: assets.splash.clone(),
@@ -50,6 +38,45 @@ fn splash_setup(
             ..default()
         },
         OnSplashScreen,
+    ));
+
+    commands.spawn((
+        OnSplashScreen,
+        TextBundle::from_section(
+            "RUMBLEBEES",
+            TextStyle {
+                font: assets.font.clone(),
+                font_size: 75.0,
+                color: Color::BLACK,
+                ..default()
+            },
+        )
+            .with_text_alignment(TextAlignment::Center)
+            .with_style(Style {
+                position_type: PositionType::Absolute,
+                left: Val::Px(23.0),
+                top: Val::Px(53.0),
+                ..default()
+            }),
+    ));
+    commands.spawn((
+        OnSplashScreen,
+        TextBundle::from_section(
+            "RUMBLEBEES",
+            TextStyle {
+                font: assets.font.clone(),
+                font_size: 75.0,
+                color: Color::WHITE,
+                ..default()
+            },
+        )
+            .with_text_alignment(TextAlignment::Center)
+            .with_style(Style {
+                position_type: PositionType::Absolute,
+                left: Val::Px(20.0),
+                top: Val::Px(50.0),
+                ..default()
+            }),
     ));
 }
 

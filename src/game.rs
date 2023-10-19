@@ -256,8 +256,8 @@ fn game_setup(
         .with_text_alignment(TextAlignment::Center)
         .with_style(Style {
             position_type: PositionType::Absolute,
-            bottom: Val::Px(30.0),
-            left: Val::Px(20.0),
+            bottom: Val::Px(25.0),
+            left: Val::Px(15.0),
             ..default()
         }),
         OnGameScreen,
@@ -428,8 +428,28 @@ fn game_over(
     go: Query<Ref<GameOver>>,
     assets: Res<AssetCol>
 ) {
-    if let Ok(go) = go.get_single() {
+    for go in go.iter() {
         if go.is_added() {
+            commands.spawn((
+                OnGameScreen,
+                TextBundle::from_section(
+                    "GAME OVER",
+                    TextStyle {
+                        font: assets.font.clone(),
+                        font_size: 100.0,
+                        color: Color::BLACK,
+                        ..default()
+                    },
+                )
+                    .with_text_alignment(TextAlignment::Center)
+                    .with_style(Style {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(253.0),
+                        top: Val::Px(253.0),
+                        ..default()
+                    }),
+            ));
+
             commands.spawn((
                 OnGameScreen,
                 TextBundle::from_section(
