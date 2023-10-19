@@ -64,8 +64,8 @@ impl Tile {
     pub fn texture(&self) -> u32 {
         match self {
             Self::Air => 0,
-            Self::Dirt { style, .. } if *style > 3 => 18,
-            Self::Dirt { style, .. } => u32::from(*style) + 1,
+            Self::Dirt { style, .. } if *style > 3 => 20,
+            Self::Dirt { style, .. } => 20 as u32, //u32::from(*style) + 1,
             Self::Rock { style } => u32::from(*style) + 11,
             Self::Stalk { style } if *style == 2 => 41,
             Self::Stalk { style } => u32::from(*style) + 8,
@@ -387,11 +387,11 @@ fn get_tile_from_ascii(pos: TilePos, size: TilemapSize) -> Tile {
 
     match ch {
         b'#' => Tile::Dirt {
-            style: 1,
+            style: 0,
             topsoil: true,
         },
         b'%' => Tile::Dirt {
-            style: 5,
+            style: 2,
             topsoil: false,
         },
         b'X' => Tile::Rock { style: 0 },
