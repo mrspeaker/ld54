@@ -13,6 +13,7 @@ use bevy::prelude::*;
 use bevy::utils::Instant;
 use rand::Rng;
 use std::ops::Sub;
+use std::time::Duration;
 
 use crate::Layers;
 
@@ -71,6 +72,7 @@ impl Plugin for RumblebeePlugin {
             .add_systems(
                 Update,
                 (
+                    do_nothing_for_a_bit,
                     birth_a_bee,
                     find_target,
                     egg_collisions,
@@ -88,6 +90,11 @@ pub struct RumbleBee {
     pub faction: terrain::Faction,
 }
 
+#[derive(Component)]
+pub struct Inactive {
+    pub timer: Timer
+}
+
 // Container for grouping in Debug plugin
 #[derive(Component)]
 struct BeeContainer;
@@ -95,7 +102,7 @@ struct BeeContainer;
 #[derive(Component)]
 struct BeeBorn {
     pos: Option<Vec2>,
-    faction: Faction
+    faction: Faction,
 }
 
 // Punch arm
@@ -115,6 +122,20 @@ struct BeeFighter;
 #[derive(Component)]
 struct BeeKilled;
 
+fn do_nothing_for_a_bit(
+    mut commands: Commands,
+    mut beez: Query<(Entity, &mut Inactive)>,
+    time: Res<Time>
+) {
+
+    for (ent, mut inactive) in beez.iter_mut() {
+        inactive.timer.tick(time.delta());
+        if inactive.timer.finished() {
+            commands.entity(ent).remove::<Inactive>();
+        }
+    }
+}
+
 fn rumblebee_setup(
     mut commands: Commands,
 ){
@@ -122,14 +143,6 @@ fn rumblebee_setup(
         .insert(Name::new("Beez"));
 
     // Make the beez
-    /*let num_beez = 2;
-    for i in 0..num_beez {
-        // Spawn new bee spawn (added in birth_bee)
-        commands.spawn(BeeBorn {
-            pos: None,
-            faction: if i < num_beez / 2 { Faction::Blue } else { Faction::Red }
-        });
-}*/
     commands.spawn(BeeBorn {
         pos: Some(Vec2 { x: 580.0, y: 300.0 }),
         faction: Faction::Blue
@@ -199,6 +212,7 @@ fn birth_a_bee(
                     false => Faction::Red
                 }
             },
+            Inactive { timer: Timer::new(Duration::from_secs(3), TimerMode::Once) },
             OnGameScreen,
             FollowPath {
                 end: pos.xy(),
@@ -259,7 +273,7 @@ fn birth_a_bee(
 fn find_target(
     mut commands: Commands,
     entity: Query<(Entity, &Transform, &RumbleBee),
-                  (Without<Pathfinding>, Without<BeeFighter>)>,
+                  (Without<Inactive>, Without<Pathfinding>, Without<BeeFighter>)>,
     tilemap: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -459,7 +473,7 @@ fn egg_collisions(
 
 fn fight_collisions(
     mut commands: Commands,
-    beez: Query<(Entity, &RumbleBee, &Transform), Without<BeeFighter>>,
+    beez: Query<(Entity, &RumbleBee, &Transform), (Without<Inactive>, Without<BeeFighter>)>,
     time: Res<Time>
 ){
     for [
