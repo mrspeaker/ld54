@@ -122,7 +122,7 @@ pub struct AssetCol {
     blip: Handle<AudioSource>,
     #[asset(path = "sounds/test.ogg")]
     tune: Handle<AudioSource>,
-    #[asset(path = "font/FredokaOne-Regular.ttf")]
+    #[asset(path = "font/Curse of the Zombie.ttf")]
     font: Handle<Font>,
 }
 

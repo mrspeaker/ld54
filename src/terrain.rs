@@ -374,7 +374,7 @@ fn get_tile_from_ascii(pos: TilePos, size: TilemapSize) -> Tile {
     ...#...................\
     .......................\
     ###.................###\
-    %%%#################%XX\
+    %%%#################%%%\
     XXXXXXXXXXXXXXXXXXXXXXX";
 
     // TODO: how to do this nicely?

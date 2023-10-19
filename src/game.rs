@@ -24,7 +24,7 @@ impl Plugin for GamePlugin {
             .add_systems(
                 Update,
                 (
-                    // dbg_draw_path,
+                    bevy::window::close_on_esc,
                     check_exit,
                     move_bob,
                     follow_path,
@@ -32,8 +32,8 @@ impl Plugin for GamePlugin {
                     smash_dirt_when_stuck,
                     animate_sprite,
                     update_sprite,
-                    bevy::window::close_on_esc,
-                    egg_listener
+                    egg_listener,
+                    game_over
                 )
                     .run_if(in_state(GameState::InGame)),
             )
@@ -52,6 +52,9 @@ pub struct Stuck {
     tile: Entity,
     last_dig: Instant
 }
+
+#[derive(Component)]
+pub struct GameOver;
 
 /// A pair of navmeshes to represent an "alternative" view of the navmesh.
 /// In our case that is the tilemap withouth DIRT tiles, to let an entity
@@ -243,7 +246,7 @@ fn game_setup(
 
     commands.spawn((
         TextBundle::from_section(
-            "exit",
+            "EXIT",
             TextStyle {
                 font: assets.font.clone(),
                 font_size: 24.0,
@@ -418,4 +421,35 @@ fn smash_dirt_when_stuck(
             commands.entity(entity).remove::<Stuck>();
         }
     }
+}
+
+fn game_over(
+    mut commands: Commands,
+    go: Query<Ref<GameOver>>,
+    assets: Res<AssetCol>
+) {
+    if let Ok(go) = go.get_single() {
+        if go.is_added() {
+            commands.spawn((
+                OnGameScreen,
+                TextBundle::from_section(
+                    "GAME OVER",
+                    TextStyle {
+                        font: assets.font.clone(),
+                        font_size: 100.0,
+                        color: Color::WHITE,
+                        ..default()
+                    },
+                )
+                    .with_text_alignment(TextAlignment::Center)
+                    .with_style(Style {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(250.0),
+                        top: Val::Px(250.0),
+                        ..default()
+                    }),
+            ));
+        }
+    }
+
 }

@@ -1,6 +1,6 @@
 use crate::game::{
     OnGameScreen, Speed, Bob, Displacement,
-    AnimationTimer, AnimationIndices, GotAnEgg, GameData, NavmeshPair, FollowPath
+    AnimationTimer, AnimationIndices, GotAnEgg, GameData, NavmeshPair, FollowPath, GameOver
 };
 use crate::AssetCol;
 use crate::settings::{RUMBLEBEE_SPEED_MAX, RUMBLEBEE_PER_EGG_SPEEDUP_PERC, RUMBLEBEE_SPEED_START, RUMBLEBEE_SPEED_VARIANCE};
@@ -355,7 +355,8 @@ fn find_target(
                     }
                 } else {
                     // No paths left. Game over?
-                   game_data.game_over = true;
+                    game_data.game_over = true;
+                    commands.spawn(GameOver);
                 }
             }
             if retries < 0 {
@@ -416,6 +417,7 @@ fn egg_collisions(
                 if game_data.game_over {
                     return;
                 }
+
                 got_egg_event.send_default();
 
 
@@ -602,8 +604,12 @@ fn bee_dead(
             red += 1;
         }
     }
-    if (blue == 0 || red == 0) && game_data.game_started {
+    if (blue == 0 || red == 0) &&
+        game_data.game_started &&
+        !game_data.game_over
+    {
         // Game over!
         game_data.game_over = true;
+        commands.spawn(GameOver);
     }
 }
