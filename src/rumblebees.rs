@@ -320,6 +320,8 @@ fn find_target(
             if let Some(path) = Pathfinding::astar(&navmesh.main, entity_pos, first.1.clone()) {
                 target_path = Some(path);
             } else {
+                // TESTING: no digging now that bees age...
+                /*
                 // Find the neearest dirt tile that is blocking path to egg
                 if let Some(mut path) = Pathfinding::astar(&navmesh.alt, entity_pos, first.1.clone()) {
                     // Get path to dirt
@@ -336,6 +338,7 @@ fn find_target(
                         target_path = Some(Pathfinding { path: p, at: 0 });
                     }
                 }
+                */
             }
         }
 
@@ -573,7 +576,8 @@ fn bee_dead(
     //assets: Res<AssetCol>,
     tilemap: Query<(&TileStorage, &TilemapGridSize)>,
     mut tile_query: Query<&mut Tile, Without<Egg>>,
-    mut game_data: ResMut<GameData>
+    mut game_data: ResMut<GameData>,
+    assets: Res<AssetCol>
 ) {
     let (tile_storage, grid_size) = tilemap.single();
 
@@ -582,14 +586,15 @@ fn bee_dead(
 
         // Get tile pos.
         let tp = px_to_tilepos(pos.translation.xy().sub(Vec2 { x: GAP_LEFT, y: 0.0 }), grid_size);
+        let tpx = tilepos_to_px(&tp, grid_size);
 
-        if let Some(tile_ent) = tile_storage.get(&tp) {
+        /*if let Some(tile_ent) = tile_storage.get(&tp) {
             if let Ok(mut tile) = tile_query.get_mut(tile_ent) {
                 *tile = Tile::Poo { style: if bee.faction == Faction::Blue { 1 } else { 0 } };
             }
-        }
+        }*/
 
-        /*commands.spawn((SpriteSheetBundle {
+        commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
             transform: Transform::from_xyz(
                 tpx.x,
@@ -598,7 +603,7 @@ fn bee_dead(
             sprite: TextureAtlasSprite::new(37),
             ..default()
         }, OnGameScreen));
-
+/*
         // Add some bones
         // TODO: needs to set tilemap, not just be a sprite
         let size = 40.0;
@@ -650,7 +655,7 @@ fn get_older(
     assets: Res<AssetCol>
 ) {
     for (ent, mut health, _children, oldy) in beez.iter_mut() {
-        health.0 = health.0.sub(10.0 * time.delta_seconds());
+        health.0 = health.0.sub(2.0 * time.delta_seconds());
 
         // Add or remove beard
         if oldy.is_none() {
