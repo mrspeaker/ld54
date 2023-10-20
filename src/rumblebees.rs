@@ -571,28 +571,20 @@ fn bee_fight(
 
 fn bee_dead(
     mut commands: Commands,
-    mut ent: Query<(Entity, &RumbleBee, &Transform), Added<BeeKilled>>,
+    mut ent: Query<(Entity, &Transform), Added<BeeKilled>>,
     all_beez: Query<&RumbleBee, Without<BeeKilled>>,
-    //assets: Res<AssetCol>,
-    tilemap: Query<(&TileStorage, &TilemapGridSize)>,
-    mut tile_query: Query<&mut Tile, Without<Egg>>,
+    tilemap: Query<&TilemapGridSize>,
     mut game_data: ResMut<GameData>,
     assets: Res<AssetCol>
 ) {
-    let (tile_storage, grid_size) = tilemap.single();
+    for (ent, pos) in ent.iter_mut() {
 
-    for (ent, bee, pos) in ent.iter_mut() {
+        let grid_size = tilemap.single();
         commands.entity(ent).despawn_recursive();
 
         // Get tile pos.
         let tp = px_to_tilepos(pos.translation.xy().sub(Vec2 { x: GAP_LEFT, y: 0.0 }), grid_size);
         let tpx = tilepos_to_px(&tp, grid_size);
-
-        /*if let Some(tile_ent) = tile_storage.get(&tp) {
-            if let Ok(mut tile) = tile_query.get_mut(tile_ent) {
-                *tile = Tile::Poo { style: if bee.faction == Faction::Blue { 1 } else { 0 } };
-            }
-        }*/
 
         commands.spawn((SpriteSheetBundle {
             texture_atlas: assets.tiles.clone(),
@@ -624,36 +616,45 @@ fn bee_dead(
                 Layers::MIDGROUND - 1.0).with_scale(Vec3 { x: 0.4, y: 0.8, z: 1.0 }),
             sprite: TextureAtlasSprite::new(38),
             ..default()
-         }, OnGameScreen));*/
+    }, OnGameScreen));*/
+
+        // Is it game over?
+        let mut blue = 0;
+        let mut red = 0;
+        for bee in all_beez.iter() {
+            if bee.faction == Faction::Blue {
+                blue += 1;
+            }
+            if bee.faction == Faction::Red {
+                red += 1;
+            }
+        }
+        if (blue == 0 || red == 0) &&
+            game_data.game_started &&
+            !game_data.game_over
+        {
+            // Game over!
+            game_data.game_over = true;
+            commands.spawn(GameOver);
+        }
     }
 
-    // Is it game over?
-    let mut blue = 0;
-    let mut red = 0;
-    for bee in all_beez.iter() {
-        if bee.faction == Faction::Blue {
-            blue += 1;
-        }
-        if bee.faction == Faction::Red {
-            red += 1;
-        }
-    }
-    if (blue == 0 || red == 0) &&
-        game_data.game_started &&
-        !game_data.game_over
-    {
-        // Game over!
-        game_data.game_over = true;
-        commands.spawn(GameOver);
-    }
 }
 
 fn get_older(
     mut commands: Commands,
-    mut beez: Query<(Entity, &mut Health, &mut Children, Option<&OldTimer>), With<RumbleBee>>,
+    mut beez: Query<
+            (Entity, &mut Health, &mut Children, Option<&OldTimer>),
+        (With<RumbleBee>, Without<BeeKilled>)>,
     time: Res<Time>,
-    assets: Res<AssetCol>
+    assets: Res<AssetCol>,
+    game_data: Res<GameData>,
+
 ) {
+    if game_data.game_over {
+        return;
+    }
+
     for (ent, mut health, _children, oldy) in beez.iter_mut() {
         health.0 = health.0.sub(2.0 * time.delta_seconds());
 
@@ -679,7 +680,7 @@ fn get_older(
         }
 
         if health.0 <= 0.0 {
-            commands.entity(ent).despawn_recursive();
+            commands.entity(ent).insert(BeeKilled);
         }
     }
 }
