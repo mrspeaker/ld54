@@ -1,6 +1,7 @@
 use crate::game::{
     OnGameScreen, Speed, Bob, Displacement,
-    AnimationTimer, AnimationIndices, GotAnEgg, GameData, NavmeshPair, FollowPath, GameOver
+    AnimationTimer, AnimationIndices, GotAnEgg, GameData, NavmeshPair, FollowPath, GameOver,
+    Health
 };
 use crate::AssetCol;
 use crate::settings::{RUMBLEBEE_SPEED_MAX, RUMBLEBEE_PER_EGG_SPEEDUP_PERC, RUMBLEBEE_SPEED_START, RUMBLEBEE_SPEED_VARIANCE};
@@ -74,6 +75,7 @@ impl Plugin for RumblebeePlugin {
                 (
                     do_nothing_for_a_bit,
                     birth_a_bee,
+                    get_older,
                     find_target,
                     egg_collisions,
                     fight_collisions,
@@ -94,6 +96,9 @@ pub struct RumbleBee {
 pub struct Inactive {
     pub timer: Timer
 }
+
+#[derive(Component)]
+pub struct OldTimer;
 
 // Container for grouping in Debug plugin
 #[derive(Component)]
@@ -213,6 +218,7 @@ fn birth_a_bee(
                 }
             },
             Inactive { timer: Timer::new(Duration::from_secs(3), TimerMode::Once) },
+            Health(100.0),
             OnGameScreen,
             FollowPath {
                 end: pos.xy(),
@@ -631,9 +637,44 @@ fn bee_dead(
         game_data.game_started &&
         !game_data.game_over
     {
-        info!("whattt game oer");
         // Game over!
         game_data.game_over = true;
         commands.spawn(GameOver);
+    }
+}
+
+fn get_older(
+    mut commands: Commands,
+    mut beez: Query<(Entity, &mut Health, &mut Children, Option<&OldTimer>), With<RumbleBee>>,
+    time: Res<Time>,
+    assets: Res<AssetCol>
+) {
+    for (ent, mut health, _children, oldy) in beez.iter_mut() {
+        health.0 = health.0.sub(10.0 * time.delta_seconds());
+
+        // Add or remove beard
+        if oldy.is_none() {
+            if  health.0 < 20.0 {
+                // Get a beard
+                let beard = commands.spawn(
+                    SpriteSheetBundle {
+                        texture_atlas: assets.chars.clone(),
+                        transform: Transform::from_xyz(0.,0., 0.01).with_scale(Vec3::splat(50.0/80.0)),
+                        sprite: TextureAtlasSprite::new(4),
+                        ..default()
+                    },
+                ).id();
+                commands.entity(ent).insert(OldTimer).push_children(&[beard]);
+            }
+        } else {
+            if health.0 > 20.0 {
+                // Lose a beard!
+                //commands.entity(ent).remove::<OldTimer>();
+            }
+        }
+
+        if health.0 <= 0.0 {
+            commands.entity(ent).despawn_recursive();
+        }
     }
 }

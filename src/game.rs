@@ -2,7 +2,7 @@ use std::ops::{Add, Sub};
 use crate::pathfinding::{Pathfinding, Navmesh};
 use crate::pointer::Pointer;
 use crate::settings::{RUMBLEBEE_SPEED_START, DIG_REPEAT_IN_SECS, DIG_POWER, EGG_SPAWN_TIME_START};
-use crate::terrain::{GAP_LEFT, px_to_tilepos, Health};
+use crate::terrain::{GAP_LEFT, px_to_tilepos};
 use crate::{despawn_screen, GameState, AssetCol};
 use bevy::math::Vec3Swizzles;
 use bevy::utils::Instant;
@@ -11,7 +11,6 @@ use bevy_kira_audio::prelude::*;
 
 use crate::terrain::Tile;
 use bevy_ecs_tilemap::prelude::*;
-
 
 use crate::Layers;
 
@@ -72,6 +71,12 @@ pub struct Speed {
 
 #[derive(Component)]
 pub struct Displacement(pub Vec2);
+
+#[derive(Component)]
+pub struct HealthByte(pub u8);
+
+#[derive(Component)]
+pub struct Health(pub f32);
 
 #[derive(Component)]
 pub struct Bob;
@@ -364,7 +369,7 @@ fn check_if_stuck_in_tile(
         &TilemapGridSize,
         &TileStorage,
     )>,
-    tiles: Query<&Tile, With<Health>>,
+    tiles: Query<&Tile, With<HealthByte>>,
     time: Res<Time>
 ){
     let (grid_size, storage) = tilemap.single();
@@ -390,7 +395,7 @@ fn check_if_stuck_in_tile(
 fn smash_dirt_when_stuck(
     mut commands: Commands,
     mut ents: Query<(Entity, &mut Stuck)>,
-    mut tiles: Query<(&mut Tile, &mut Health, &mut TileColor)>,
+    mut tiles: Query<(&mut Tile, &mut HealthByte, &mut TileColor)>,
     time: Res<Time>
 ) {
 

@@ -15,7 +15,7 @@ use crate::Layers;
 use crate::game::NavmeshPair;
 use crate::game::remove_conflicting_paths_on_tile_change;
 use crate::game::update_navmesh_on_tile_change;
-use crate::game::{OnGameScreen,GameData};
+use crate::game::{OnGameScreen,GameData,HealthByte};
 use crate::pathfinding::Navmesh;
 use crate::inventory::Inventory;
 use crate::pointer::{Pointer, update_pointer};
@@ -226,9 +226,6 @@ pub struct Terrarium;
 #[derive(Resource, Deref, DerefMut)]
 struct PlantSpawner(Timer);
 
-#[derive(Component)]
-pub struct Health(pub u8);
-
 fn terrain_setup(
     mut commands: Commands,
     assets: Res<AssetServer>
@@ -329,7 +326,7 @@ fn spawn_tile(commands: &mut Commands, position: TilePos, tile: Tile, map_ent: E
         texture_index: TileTextureIndex(tile.texture()),
         ..Default::default()
     };
-    let health = Health(100);
+    let health = HealthByte(100);
 
     match tile {
         Tile::Dirt { topsoil: true, .. } => commands.spawn((tbundle, Topsoil, tile, health)),
@@ -420,7 +417,7 @@ fn highlight_tile(
         ),
         Without<Cursor>,
     >,
-    mut tile_q: Query<(&mut Tile, &mut Health)>,
+    mut tile_q: Query<(&mut Tile, &mut HealthByte)>,
     inv: Res<Inventory>, // TODO: not using this anymore
     assets: Res<AssetCol>,
     audio: Res<Audio>,
