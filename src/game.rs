@@ -104,7 +104,6 @@ pub struct AnimationTimer(pub Timer);
 #[derive(Resource)]
 pub struct GameData {
     pub eggs_spawned: usize,
-    pub game_started: bool,
     pub game_over: bool,
     pub bee_base_speed: f32,
     pub egg_spawn_time: f32
@@ -123,8 +122,6 @@ fn egg_listener(
     let got_egg = events.len() > 0;
     for _ in events.iter() {
         game_data.eggs_spawned += 1;
-        game_data.game_started = true; // Can't get 0 total lol.
-                                       // Not sure where "game_started" could be set.
     }
 
     if got_egg {
@@ -191,7 +188,6 @@ fn game_setup(
 
     commands.insert_resource(GameData {
         eggs_spawned: 0,
-        game_started: false,
         game_over: false,
         bee_base_speed: RUMBLEBEE_SPEED_START,
         egg_spawn_time: EGG_SPAWN_TIME_START

@@ -149,12 +149,12 @@ fn rumblebee_setup(
 
     // Make the beez
     commands.spawn(BeeBorn {
-        pos: Some(Vec2 { x: 580.0, y: 300.0 }),
-        faction: Faction::Blue
+        pos: Some(Vec2 { x: 620.0, y: 220.0 }),
+        faction: Faction::Red
     });
     commands.spawn(BeeBorn {
-        pos: Some(Vec2 { x: 460.0, y: 300.0 }),
-        faction: Faction::Red
+        pos: Some(Vec2 { x: 420.0, y: 220.0 }),
+        faction: Faction::Blue
     });
 
 
@@ -630,7 +630,6 @@ fn bee_dead(
             }
         }
         if (blue == 0 || red == 0) &&
-            game_data.game_started &&
             !game_data.game_over
         {
             // Game over!
@@ -665,8 +664,8 @@ fn get_older(
                 let beard = commands.spawn(
                     SpriteSheetBundle {
                         texture_atlas: assets.chars.clone(),
-                        transform: Transform::from_xyz(0.,0., 0.01).with_scale(Vec3::splat(50.0/80.0)),
-                        sprite: TextureAtlasSprite::new(4),
+                        transform: Transform::from_xyz(0.,0., 0.01),
+                        sprite: TextureAtlasSprite::new(15),
                         ..default()
                     },
                 ).id();

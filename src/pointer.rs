@@ -61,6 +61,24 @@ pub fn update_pointer(
         }
     }
 
+    for finger in touches.iter() {
+        if touches.just_pressed(finger.id()) {
+            println!("A new touch with ID {} just began.", finger.id());
+        }
+        touch_move = true;
+
+        debug!(
+            "Finger {} is at position ({},{}), started from ({},{}).",
+            finger.id(),
+            finger.position().x,
+            finger.position().y,
+            finger.start_position().x,
+            finger.start_position().y,
+        );
+        pointer.pos.x = finger.position().x;
+        pointer.pos.y = finger.position().y;
+    }
+
     pointer.pressed
         = mouse.just_pressed(MouseButton::Left)
         || touches.any_just_pressed();
