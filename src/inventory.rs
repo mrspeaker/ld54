@@ -3,7 +3,6 @@ use crate::game::GameData;
 use crate::game::OnGameScreen;
 use crate::prelude::*;
 use crate::GameState;
-use crate::terrain::GAP_LEFT;
 
 pub const DIRT_AMOUNT:u32 = 64;
 

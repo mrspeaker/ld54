@@ -65,7 +65,7 @@ impl Tile {
         match self {
             Self::Air => 0,
             Self::Dirt { style, .. } if *style > 3 => 20,
-            Self::Dirt { style, .. } => 20 as u32, //u32::from(*style) + 1,
+            Self::Dirt { .. } => 20 as u32,
             Self::Rock { style } => u32::from(*style) + 11,
             Self::Stalk { style } if *style == 2 => 41,
             Self::Stalk { style } => u32::from(*style) + 8,

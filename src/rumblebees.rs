@@ -4,7 +4,7 @@ use crate::game::{
     Health
 };
 use crate::AssetCol;
-use crate::settings::{RUMBLEBEE_SPEED_MAX, RUMBLEBEE_PER_EGG_SPEEDUP_PERC, RUMBLEBEE_SPEED_START, RUMBLEBEE_SPEED_VARIANCE};
+use crate::settings::{RUMBLEBEE_SPEED_MAX, RUMBLEBEE_PER_EGG_SPEEDUP_PERC, RUMBLEBEE_SPEED_START, RUMBLEBEE_SPEED_VARIANCE, AGING_AMOUNT_PER_TICK};
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use rand::seq::IteratorRandom;
 use crate::terrain::{GAP_LEFT, Tile, Egg, Faction, tilepos_to_px, find_empty_tile, px_to_tilepos};
@@ -655,7 +655,7 @@ fn get_older(
     }
 
     for (ent, mut health, _children, oldy) in beez.iter_mut() {
-        health.0 = health.0.sub(2.0 * time.delta_seconds());
+        health.0 = health.0.sub(AGING_AMOUNT_PER_TICK * time.delta_seconds());
 
         // Add or remove beard
         if oldy.is_none() {
